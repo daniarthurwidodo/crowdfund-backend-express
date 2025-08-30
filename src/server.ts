@@ -9,6 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import redisClient from './config/redis';
 import { sequelize } from './models';
 import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
 import swaggerSpecs from './config/swagger';
 
 dotenv.config();
@@ -81,6 +82,7 @@ app.get('/health/live', (req: Request, res: Response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   explorer: true,
