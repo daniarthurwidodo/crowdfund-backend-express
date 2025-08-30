@@ -1,10 +1,12 @@
 import { Op } from 'sequelize';
 import { Project } from '../models';
 import { ProjectStatus } from '../types';
+import { createChildLogger } from '../config/logger';
 
 export class ProjectScheduler {
   private static instance: ProjectScheduler;
   private intervalId: NodeJS.Timeout | null = null;
+  private logger = createChildLogger('ProjectScheduler');
 
   private constructor() {}
 
@@ -16,7 +18,7 @@ export class ProjectScheduler {
   }
 
   public start(): void {
-    console.log('Starting project status scheduler...');
+    this.logger.info('Starting project status scheduler...');
     
     this.intervalId = setInterval(async () => {
       await this.updateProjectStatuses();
@@ -29,7 +31,7 @@ export class ProjectScheduler {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log('Project status scheduler stopped.');
+      this.logger.info('Project status scheduler stopped.');
     }
   }
 
@@ -50,7 +52,7 @@ export class ProjectScheduler {
         await project.update({ 
           status: ProjectStatus.CLOSED 
         });
-        console.log(`Project ${project.id} closed due to time expiration`);
+        this.logger.info(`Project ${project.id} closed due to time expiration`, { projectId: project.id });
       }
 
       const fullyFundedProjects = await Project.findAll({
@@ -66,15 +68,18 @@ export class ProjectScheduler {
         await project.update({ 
           status: ProjectStatus.CLOSED 
         });
-        console.log(`Project ${project.id} closed due to reaching funding goal`);
+        this.logger.info(`Project ${project.id} closed due to reaching funding goal`, { projectId: project.id });
       }
 
       if (expiredProjects.length > 0 || fullyFundedProjects.length > 0) {
-        console.log(`Updated status for ${expiredProjects.length + fullyFundedProjects.length} projects`);
+        this.logger.info(`Updated status for ${expiredProjects.length + fullyFundedProjects.length} projects`, {
+          expiredCount: expiredProjects.length,
+          fullyFundedCount: fullyFundedProjects.length
+        });
       }
 
     } catch (error) {
-      console.error('Error updating project statuses:', error);
+      this.logger.error({ err: error }, 'Error updating project statuses');
     }
   }
 
@@ -114,7 +119,7 @@ export class ProjectScheduler {
         fullyFunded: fullyFundedProjects.length
       };
     } catch (error) {
-      console.error('Error in manual project status update:', error);
+      this.logger.error({ err: error }, 'Error in manual project status update');
       throw error;
     }
   }
@@ -135,7 +140,7 @@ export class ProjectScheduler {
         order: [['endDate', 'ASC']]
       });
     } catch (error) {
-      console.error('Error fetching projects nearing expiration:', error);
+      this.logger.error({ err: error }, 'Error fetching projects nearing expiration');
       throw error;
     }
   }
@@ -160,7 +165,7 @@ export class ProjectScheduler {
 
       return stats[0] as any;
     } catch (error) {
-      console.error('Error fetching project stats:', error);
+      this.logger.error({ err: error }, 'Error fetching project stats');
       throw error;
     }
   }

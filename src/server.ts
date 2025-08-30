@@ -14,6 +14,7 @@ import projectRoutes from './routes/projects';
 import donationRoutes from './routes/donations';
 import swaggerSpecs from './config/swagger';
 import { ProjectScheduler } from './services/projectScheduler';
+import { logger, httpLogger } from './config/logger';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.'
 });
 
+app.use(httpLogger);
 app.use(helmet());
 app.use(limiter);
 app.use(cors({
@@ -35,7 +37,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-redisClient.connect().catch(console.error);
+redisClient.connect().catch((error) => logger.error('Redis connection error:', error));
 
 app.use(session({
   store: new RedisStore({ client: redisClient }),
@@ -110,7 +112,7 @@ app.use('*', (req: Request, res: Response) => {
 });
 
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', error);
+  logger.error({ err: error, req }, 'Unhandled error');
   res.status(500).json({ 
     message: 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && { error: error.message })
@@ -121,23 +123,23 @@ let server: any;
 let scheduler: ProjectScheduler;
 
 const gracefulShutdown = async (signal: string): Promise<void> => {
-  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  logger.info(`${signal} received. Starting graceful shutdown...`);
   
   const shutdownTimeout = setTimeout(() => {
-    console.error('Graceful shutdown timeout. Forcing exit.');
+    logger.error('Graceful shutdown timeout. Forcing exit.');
     process.exit(1);
   }, 30000);
 
   try {
     if (server) {
-      console.log('Closing HTTP server...');
+      logger.info('Closing HTTP server...');
       await new Promise<void>((resolve, reject) => {
         server.close((err: any) => {
           if (err) {
-            console.error('Error closing server:', err);
+            logger.error({ err }, 'Error closing server');
             reject(err);
           } else {
-            console.log('HTTP server closed.');
+            logger.info('HTTP server closed.');
             resolve();
           }
         });
@@ -145,25 +147,25 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
     }
 
     if (scheduler) {
-      console.log('Stopping project scheduler...');
+      logger.info('Stopping project scheduler...');
       scheduler.stop();
     }
 
-    console.log('Closing Redis connection...');
+    logger.info('Closing Redis connection...');
     if (redisClient.isOpen) {
       await redisClient.quit();
-      console.log('Redis connection closed.');
+      logger.info('Redis connection closed.');
     }
 
-    console.log('Closing database connection...');
+    logger.info('Closing database connection...');
     await sequelize.close();
-    console.log('Database connection closed.');
+    logger.info('Database connection closed.');
 
     clearTimeout(shutdownTimeout);
-    console.log('Graceful shutdown completed successfully.');
+    logger.info('Graceful shutdown completed successfully.');
     process.exit(0);
   } catch (error) {
-    console.error('Error during graceful shutdown:', error);
+    logger.error({ err: error }, 'Error during graceful shutdown');
     clearTimeout(shutdownTimeout);
     process.exit(1);
   }
@@ -175,46 +177,46 @@ process.on('SIGUSR1', () => gracefulShutdown('SIGUSR1'));
 process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
 
 process.on('uncaughtException', (error: Error) => {
-  console.error('Uncaught Exception:', error);
+  logger.fatal({ err: error }, 'Uncaught Exception');
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.fatal({ reason, promise }, 'Unhandled Rejection');
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
 const startServer = async (): Promise<void> => {
   try {
     await sequelize.authenticate();
-    console.log('Database connection established successfully.');
+    logger.info('Database connection established successfully.');
     
     if (process.env.NODE_ENV !== 'production') {
       await sequelize.sync();
-      console.log('Database synchronized.');
+      logger.info('Database synchronized.');
     }
     
     scheduler = ProjectScheduler.getInstance();
     scheduler.start();
     
     server = app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Health check available at: http://localhost:${PORT}/health`);
-      console.log(`API Documentation available at: http://localhost:${PORT}/api-docs`);
-      console.log('Press Ctrl+C for graceful shutdown');
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`Health check available at: http://localhost:${PORT}/health`);
+      logger.info(`API Documentation available at: http://localhost:${PORT}/api-docs`);
+      logger.info('Press Ctrl+C for graceful shutdown');
     });
 
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please choose a different port.`);
+        logger.error(`Port ${PORT} is already in use. Please choose a different port.`);
       } else {
-        console.error('Server error:', error);
+        logger.error({ err: error }, 'Server error');
       }
       process.exit(1);
     });
 
   } catch (error) {
-    console.error('Unable to start server:', error);
+    logger.fatal({ err: error }, 'Unable to start server');
     process.exit(1);
   }
 };

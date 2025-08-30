@@ -3,6 +3,9 @@ import { Op } from 'sequelize';
 import Joi from 'joi';
 import { Project, User, Donation } from '../models';
 import { ProjectStatus, UserRole } from '../types';
+import { createChildLogger } from '../config/logger';
+
+const logger = createChildLogger('ProjectController');
 
 const projectSchema = Joi.object({
   title: Joi.string().min(5).max(200).required(),
@@ -53,7 +56,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       project: createdProject
     });
   } catch (error: any) {
-    console.error('Error creating project:', error);
+    logger.error({ err: error, userId: req.user?.id }, 'Error creating project');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -138,7 +141,7 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
       }
     });
   } catch (error: any) {
-    console.error('Error fetching projects:', error);
+    logger.error({ err: error, query: req.query }, 'Error fetching projects');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -174,7 +177,7 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
 
     res.json({ project });
   } catch (error: any) {
-    console.error('Error fetching project:', error);
+    logger.error({ err: error, projectId: req.params.id }, 'Error fetching project');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -224,7 +227,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       project
     });
   } catch (error: any) {
-    console.error('Error updating project:', error);
+    logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error updating project');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -252,7 +255,7 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
     await project.destroy();
     res.json({ message: 'Project deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting project:', error);
+    logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error deleting project');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -307,7 +310,7 @@ export const getMyProjects = async (req: Request, res: Response): Promise<void> 
       }
     });
   } catch (error: any) {
-    console.error('Error fetching user projects:', error);
+    logger.error({ err: error, userId: req.user?.id }, 'Error fetching user projects');
     res.status(500).json({ message: 'Internal server error' });
   }
 };

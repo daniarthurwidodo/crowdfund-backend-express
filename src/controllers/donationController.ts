@@ -3,6 +3,9 @@ import { Op } from 'sequelize';
 import Joi from 'joi';
 import { Project, User, Donation } from '../models';
 import { ProjectStatus } from '../types';
+import { createChildLogger } from '../config/logger';
+
+const logger = createChildLogger('DonationController');
 
 const donationSchema = Joi.object({
   amount: Joi.number().min(1).required(),
@@ -81,7 +84,7 @@ export const createDonation = async (req: Request, res: Response): Promise<void>
       donation: createdDonation
     });
   } catch (error: any) {
-    console.error('Error creating donation:', error);
+    logger.error({ err: error, body: req.body, userId: req.user?.id }, 'Error creating donation');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -152,7 +155,7 @@ export const getDonations = async (req: Request, res: Response): Promise<void> =
       }
     });
   } catch (error: any) {
-    console.error('Error fetching donations:', error);
+    logger.error({ err: error, query: req.query }, 'Error fetching donations');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -188,7 +191,7 @@ export const getDonationById = async (req: Request, res: Response): Promise<void
 
     res.json({ donation });
   } catch (error: any) {
-    console.error('Error fetching donation:', error);
+    logger.error({ err: error, donationId: req.params.id }, 'Error fetching donation');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -241,7 +244,7 @@ export const getMyDonations = async (req: Request, res: Response): Promise<void>
       }
     });
   } catch (error: any) {
-    console.error('Error fetching user donations:', error);
+    logger.error({ err: error, userId: req.user?.id }, 'Error fetching user donations');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -296,7 +299,7 @@ export const getProjectDonations = async (req: Request, res: Response): Promise<
       }
     });
   } catch (error: any) {
-    console.error('Error fetching project donations:', error);
+    logger.error({ err: error, projectId: req.params.projectId }, 'Error fetching project donations');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
