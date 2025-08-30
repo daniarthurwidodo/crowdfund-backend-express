@@ -5,6 +5,14 @@
   - [ ] DB migrations for transactions
   - [ ] implement endpoints + webhook handling
   - [ ] add unit/integration tests
+  - [ ] Xendit integration
+    - [ ] add env vars: XENDIT_SECRET_KEY, XENDIT_PUBLIC_KEY, XENDIT_CALLBACK_URL
+    - [ ] choose integration approach (Invoices / Virtual Accounts / E-wallets / Card)
+    - [ ] add example server-side routes: createCharge, createVA, createInvoice
+    - [ ] implement webhook verification & handler (signature check)
+    - [ ] add Postman requests and webhook mock examples (sandbox)
+    - [ ] add unit & integration tests using Xendit sandbox
+    - [ ] document usage in README and .env.example
 
 - [x] Swagger
   - [x] move Swagger comment blocks above route handlers
