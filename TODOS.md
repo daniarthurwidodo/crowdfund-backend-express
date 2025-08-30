@@ -76,7 +76,7 @@
   - [ ] add health, readiness, and liveness checks to deployment
 
 - [ ] Testing & Quality
-  - [ ] add unit tests for controllers, services, and utils (jest)
+  - [x] add unit tests for controllers, services, and utils (jest)
   - [ ] add integration tests for DB and file uploads (supertest)
   - [ ] add contract tests for external integrations (Xendit/webhooks)
   - [ ] enable CI to run lint, typecheck, tests, and build
