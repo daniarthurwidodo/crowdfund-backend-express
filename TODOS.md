@@ -30,13 +30,27 @@
   - [x] commit: Postman collection update (Uploads requests)
   - [ ] create release / tag after payment module implemented
 
-- [ ] Image upload improvements
-  - [ ] ensure uploads folders are created on startup
-  - [ ] add unit tests for upload handlers and error cases
+- [x] Image upload improvements
+  - [x] ensure uploads folders are created on startup
+    - [x] created initializeUploadDirectories() function with error handling
+    - [x] integrated directory verification and permission checks
+    - [x] added to server startup sequence
+  - [x] add unit tests for upload handlers and error cases
+    - [x] set up Jest testing framework with TypeScript support
+    - [x] added comprehensive test suite (20 tests covering all upload utilities)
+    - [x] tests for directory initialization, image processing, validation, and error handling
 
-- [ ] Controllers & routes
-  - [ ] create/review userController (ensure avatar update handled)
-  - [ ] review projectController for image handling and authorization
+- [x] Controllers & routes
+  - [x] create/review userController (ensure avatar update handled)
+    - [x] reviewed existing avatar handling functionality
+    - [x] added missing route integrations (/profile, /change-password, /avatar, /stats)
+    - [x] updated routes to use controller functions with proper Swagger documentation
+  - [x] review projectController for image handling and authorization
+    - [x] enhanced authorization with checkProjectAuthorization() helper
+    - [x] added image URL validation to prevent unauthorized uploads
+    - [x] implemented automatic image cleanup on project updates/deletion
+    - [x] added removeProjectImage() function with route for individual image removal
+    - [x] improved error handling and logging throughout
 
 - [ ] CI / Devops
   - [ ] add build step to run linter and tests
