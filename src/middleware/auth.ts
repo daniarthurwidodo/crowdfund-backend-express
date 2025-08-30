@@ -32,6 +32,28 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const user = await User.findByPk(decoded.userId);
+    
+    if (user) {
+      req.user = user;
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 export const generateToken = (userId: string): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {

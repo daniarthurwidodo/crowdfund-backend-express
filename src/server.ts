@@ -10,7 +10,10 @@ import redisClient from './config/redis';
 import { sequelize } from './models';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import projectRoutes from './routes/projects';
+import donationRoutes from './routes/donations';
 import swaggerSpecs from './config/swagger';
+import { ProjectScheduler } from './services/projectScheduler';
 
 dotenv.config();
 
@@ -83,6 +86,8 @@ app.get('/health/live', (req: Request, res: Response) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/donations', donationRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   explorer: true,
@@ -112,9 +117,13 @@ const startServer = async (): Promise<void> => {
       console.log('Database synchronized.');
     }
     
+    const scheduler = ProjectScheduler.getInstance();
+    scheduler.start();
+    
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Health check available at: http://localhost:${PORT}/health`);
+      console.log(`API Documentation available at: http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
     console.error('Unable to start server:', error);

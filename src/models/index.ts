@@ -1,7 +1,9 @@
 import { Sequelize } from 'sequelize';
 import config from '../config/database';
 import UserModel from './user';
-import { UserInstance } from '../types';
+import ProjectModel from './project';
+import DonationModel from './donation';
+import { UserInstance, ProjectInstance, DonationInstance } from '../types';
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env as keyof typeof config];
@@ -20,11 +22,15 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
 });
 
 const User = UserModel(sequelize);
+const Project = ProjectModel(sequelize);
+const Donation = DonationModel(sequelize);
 
 const db = {
   sequelize,
   Sequelize,
-  User
+  User,
+  Project,
+  Donation
 };
 
 Object.values(db).forEach((model: any) => {
@@ -33,6 +39,6 @@ Object.values(db).forEach((model: any) => {
   }
 });
 
-export { sequelize, Sequelize, User };
-export type { UserInstance };
+export { sequelize, Sequelize, User, Project, Donation };
+export type { UserInstance, ProjectInstance, DonationInstance };
 export default db;

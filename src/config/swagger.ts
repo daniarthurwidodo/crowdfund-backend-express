@@ -27,7 +27,29 @@ const options: Options = {
           bearerFormat: 'JWT'
         }
       }
-    }
+    },
+    tags: [
+      {
+        name: 'Health',
+        description: 'Health check endpoints'
+      },
+      {
+        name: 'Authentication',
+        description: 'User authentication endpoints'
+      },
+      {
+        name: 'Users',
+        description: 'User management endpoints'
+      },
+      {
+        name: 'Projects',
+        description: 'Project management endpoints for crowdfunding campaigns'
+      },
+      {
+        name: 'Donations',
+        description: 'Donation management endpoints'
+      }
+    ]
   },
   apis: [
     './src/routes/*.ts',
