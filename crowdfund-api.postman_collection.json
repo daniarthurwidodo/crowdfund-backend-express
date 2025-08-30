@@ -81,6 +81,18 @@
               "path": ["health", "live"]
             }
           }
+        },
+        {
+          "name": "Manual Shutdown",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/shutdown",
+              "host": ["{{base_url}}"],
+              "path": ["shutdown"]
+            }
+          }
         }
       ]
     },
