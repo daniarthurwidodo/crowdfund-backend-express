@@ -95,6 +95,13 @@
   - [x] expand Xendit plan: sample flows (invoice, VA, e-wallet), retry logic, settlement handling
   - [x] add reconciliation job to sync payment status
 
+- [x] Withdraw Fund Module
+  - [x] design withdraw fund system architecture
+  - [x] create withdraw fund database migrations and models  
+  - [x] implement withdraw fund service with validation
+  - [x] create withdraw fund API endpoints and controllers
+  - [x] add withdraw fund tests and documentation
+
 - [ ] Performance & Scalability
   - [ ] cache frequent reads with Redis and add cache invalidation strategy
   - [ ] profile slow queries and add indexes where necessary

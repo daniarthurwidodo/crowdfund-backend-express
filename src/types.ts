@@ -206,3 +206,117 @@ export interface XenditWebhookPayload {
   payment_channel?: string;
   payment_destination?: string;
 }
+
+// Withdraw Fund Types
+export enum WithdrawStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum WithdrawMethod {
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  XENDIT_DISBURSEMENT = 'XENDIT_DISBURSEMENT',
+  MANUAL = 'MANUAL'
+}
+
+export interface WithdrawAttributes {
+  id: string;
+  userId: string;
+  projectId: string;
+  amount: number;
+  availableAmount: number;
+  currency: string;
+  method: WithdrawMethod;
+  status: WithdrawStatus;
+  requestedAt: Date;
+  approvedAt?: Date;
+  processedAt?: Date;
+  completedAt?: Date;
+  rejectedAt?: Date;
+  reason?: string;
+  adminNotes?: string;
+  
+  // Bank details
+  bankName?: string;
+  bankCode?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  
+  // Xendit disbursement details
+  xenditDisbursementId?: string;
+  disbursementData?: any;
+  
+  // Fees and processing
+  processingFee: number;
+  netAmount: number;
+  
+  // Audit fields
+  approvedBy?: string;
+  processedBy?: string;
+  rejectedBy?: string;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WithdrawCreationAttributes extends Omit<WithdrawAttributes, 'id' | 'createdAt' | 'updatedAt' | 'requestedAt' | 'netAmount'> {
+  id?: string;
+}
+
+export interface WithdrawInstance extends WithdrawAttributes {
+  user?: any;
+  project?: any;
+  toJSON(): WithdrawAttributes;
+}
+
+export interface BankAccount {
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountHolderName: string;
+  isVerified?: boolean;
+}
+
+export interface WithdrawRequest {
+  projectId: string;
+  amount: number;
+  method: WithdrawMethod;
+  bankAccount?: BankAccount;
+  reason?: string;
+}
+
+export interface WithdrawApproval {
+  withdrawId: string;
+  approved: boolean;
+  adminNotes?: string;
+  processingMethod?: WithdrawMethod;
+}
+
+export interface XenditDisbursementRequest {
+  external_id: string;
+  bank_code: string;
+  account_holder_name: string;
+  account_number: string;
+  description: string;
+  amount: number;
+  email_to?: string[];
+  email_cc?: string[];
+  email_bcc?: string[];
+}
+
+export interface XenditDisbursementResponse {
+  id: string;
+  external_id: string;
+  amount: number;
+  bank_code: string;
+  account_holder_name: string;
+  disbursement_description: string;
+  status: string;
+  created: string;
+  updated: string;
+}

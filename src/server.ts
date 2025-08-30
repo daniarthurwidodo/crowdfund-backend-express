@@ -14,6 +14,7 @@ import projectRoutes from './routes/projects';
 import donationRoutes from './routes/donations';
 import uploadRoutes from './routes/uploads';
 import paymentRoutes from './routes/payments';
+import withdrawRoutes from './routes/withdrawals';
 import adminRoutes from './routes/admin';
 import swaggerSpecs from './config/swagger';
 import { ProjectScheduler } from './services/projectScheduler';
@@ -110,6 +111,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/withdrawals', withdrawRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {

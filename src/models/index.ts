@@ -4,7 +4,8 @@ import UserModel from './user';
 import ProjectModel from './project';
 import DonationModel from './donation';
 import PaymentModel from './payment';
-import { UserInstance, ProjectInstance, DonationInstance, PaymentInstance } from '../types';
+import WithdrawModel from './withdraw';
+import { UserInstance, ProjectInstance, DonationInstance, PaymentInstance, WithdrawInstance } from '../types';
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env as keyof typeof config];
@@ -26,6 +27,7 @@ const User = UserModel(sequelize);
 const Project = ProjectModel(sequelize);
 const Donation = DonationModel(sequelize);
 const Payment = PaymentModel(sequelize);
+const Withdraw = WithdrawModel;
 
 const db = {
   sequelize,
@@ -33,7 +35,8 @@ const db = {
   User,
   Project,
   Donation,
-  Payment
+  Payment,
+  Withdraw
 };
 
 Object.values(db).forEach((model: any) => {
@@ -42,6 +45,6 @@ Object.values(db).forEach((model: any) => {
   }
 });
 
-export { sequelize, Sequelize, User, Project, Donation, Payment };
-export type { UserInstance, ProjectInstance, DonationInstance, PaymentInstance };
+export { sequelize, Sequelize, User, Project, Donation, Payment, Withdraw };
+export type { UserInstance, ProjectInstance, DonationInstance, PaymentInstance, WithdrawInstance };
 export default db;
