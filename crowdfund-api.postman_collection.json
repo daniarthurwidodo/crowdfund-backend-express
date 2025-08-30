@@ -102,7 +102,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"username\": \"johndoe\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"username\": \"johndoe\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"role\": \"USER\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
@@ -216,6 +216,11 @@
                   "key": "isActive",
                   "value": "true",
                   "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "USER",
+                  "disabled": true
                 }
               ]
             }
@@ -254,7 +259,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"username\": \"janesmith\",\n  \"email\": \"jane.smith@example.com\"\n}"
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"username\": \"janesmith\",\n  \"email\": \"jane.smith@example.com\",\n  \"role\": \"FUNDRAISER\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/users/{{user_id}}",

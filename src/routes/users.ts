@@ -3,6 +3,8 @@ import Joi from 'joi';
 import { Op } from 'sequelize';
 import { User } from '../models';
 import { authenticateToken } from '../middleware/auth';
+import { requireAdmin, requireAdminOrSelf } from '../middleware/roleAuth';
+import { UserRole } from '../types';
 
 const router = express.Router();
 
@@ -10,14 +12,16 @@ const updateUserSchema = Joi.object({
   firstName: Joi.string().min(1).max(50).optional(),
   lastName: Joi.string().min(1).max(50).optional(),
   username: Joi.string().alphanum().min(3).max(30).optional(),
-  email: Joi.string().email().optional()
+  email: Joi.string().email().optional(),
+  role: Joi.string().valid(...Object.values(UserRole)).optional()
 });
 
 const getUsersQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().optional(),
-  isActive: Joi.boolean().optional()
+  isActive: Joi.boolean().optional(),
+  role: Joi.string().valid(...Object.values(UserRole)).optional()
 });
 
 /**
@@ -54,6 +58,12 @@ const getUsersQuerySchema = Joi.object({
  *         schema:
  *           type: boolean
  *         description: Filter by active status
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [ADMIN, USER, FUNDRAISER]
+ *         description: Filter by user role
  *     responses:
  *       200:
  *         description: Users retrieved successfully
@@ -82,7 +92,7 @@ const getUsersQuerySchema = Joi.object({
  *       403:
  *         description: Invalid token
  */
-router.get('/', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.get('/', authenticateToken, requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const { error, value } = getUsersQuerySchema.validate(req.query);
     if (error) {
@@ -90,7 +100,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
       return;
     }
 
-    const { page, limit, search, isActive } = value;
+    const { page, limit, search, isActive, role } = value;
     const offset = (page - 1) * limit;
 
     const whereClause: any = {};
@@ -105,6 +115,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
 
     if (typeof isActive === 'boolean') {
       whereClause.isActive = isActive;
+    }
+
+    if (role) {
+      whereClause.role = role;
     }
 
     const { count, rows } = await User.findAndCountAll({
@@ -164,7 +178,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
  *       404:
  *         description: User not found
  */
-router.get('/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.get('/:id', authenticateToken, requireAdminOrSelf, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findByPk(req.params.id);
     
@@ -218,6 +232,10 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response): Promi
  *               email:
  *                 type: string
  *                 format: email
+ *               role:
+ *                 type: string
+ *                 enum: [ADMIN, USER, FUNDRAISER]
+ *                 description: User role (Admin only)
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -241,7 +259,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response): Promi
  *       409:
  *         description: Username or email already exists
  */
-router.put('/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.put('/:id', authenticateToken, requireAdminOrSelf, async (req: Request, res: Response): Promise<void> => {
   try {
     const { error, value } = updateUserSchema.validate(req.body);
     if (error) {
@@ -255,9 +273,9 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response): Promi
       return;
     }
 
-    // Users can only update their own profile
-    if (req.user?.id !== user.id) {
-      res.status(403).json({ message: 'Insufficient permissions' });
+    // Only admins can change roles, regular users can only update their own non-role fields
+    if (value.role && req.user?.role !== UserRole.ADMIN) {
+      res.status(403).json({ message: 'Only administrators can change user roles' });
       return;
     }
 
@@ -327,7 +345,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response): Promi
  *       404:
  *         description: User not found
  */
-router.patch('/:id/deactivate', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.patch('/:id/deactivate', authenticateToken, requireAdminOrSelf, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
@@ -335,11 +353,6 @@ router.patch('/:id/deactivate', authenticateToken, async (req: Request, res: Res
       return;
     }
 
-    // Users can only deactivate their own account
-    if (req.user?.id !== user.id) {
-      res.status(403).json({ message: 'Insufficient permissions' });
-      return;
-    }
 
     await user.update({ isActive: false });
 
@@ -383,7 +396,7 @@ router.patch('/:id/deactivate', authenticateToken, async (req: Request, res: Res
  *       404:
  *         description: User not found
  */
-router.patch('/:id/activate', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.patch('/:id/activate', authenticateToken, requireAdminOrSelf, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
@@ -391,11 +404,6 @@ router.patch('/:id/activate', authenticateToken, async (req: Request, res: Respo
       return;
     }
 
-    // Users can only activate their own account
-    if (req.user?.id !== user.id) {
-      res.status(403).json({ message: 'Insufficient permissions' });
-      return;
-    }
 
     await user.update({ isActive: true });
 

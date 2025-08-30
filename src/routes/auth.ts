@@ -3,6 +3,7 @@ import Joi from 'joi';
 import { Op } from 'sequelize';
 import { User } from '../models';
 import { generateToken, authenticateToken } from '../middleware/auth';
+import { UserRole } from '../types';
 
 const router = express.Router();
 
@@ -11,7 +12,8 @@ const registerSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(30).required(),
   password: Joi.string().min(6).required(),
   firstName: Joi.string().min(1).max(50).required(),
-  lastName: Joi.string().min(1).max(50).required()
+  lastName: Joi.string().min(1).max(50).required(),
+  role: Joi.string().valid(...Object.values(UserRole)).optional().default(UserRole.USER)
 });
 
 const loginSchema = Joi.object({
@@ -54,6 +56,10 @@ const loginSchema = Joi.object({
  *           minLength: 1
  *           maxLength: 50
  *           description: Last name
+ *         role:
+ *           type: string
+ *           enum: [ADMIN, USER, FUNDRAISER]
+ *           description: User role
  *         isActive:
  *           type: boolean
  *           description: Account status
@@ -90,6 +96,10 @@ const loginSchema = Joi.object({
  *           type: string
  *           minLength: 1
  *           maxLength: 50
+ *         role:
+ *           type: string
+ *           enum: [ADMIN, USER, FUNDRAISER]
+ *           default: USER
  *     LoginRequest:
  *       type: object
  *       required:
