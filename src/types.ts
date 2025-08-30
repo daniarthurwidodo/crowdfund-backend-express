@@ -14,6 +14,12 @@ declare module 'express-session' {
   }
 }
 
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+  FUNDRAISER = 'FUNDRAISER'
+}
+
 export interface UserAttributes {
   id: string;
   email: string;
@@ -21,6 +27,7 @@ export interface UserAttributes {
   password: string;
   firstName: string;
   lastName: string;
+  role: UserRole;
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;

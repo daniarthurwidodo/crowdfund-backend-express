@@ -1,6 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
-import { UserAttributes, UserCreationAttributes, UserInstance } from '../types';
+import { UserAttributes, UserCreationAttributes, UserInstance, UserRole } from '../types';
 
 export default function(sequelize: Sequelize) {
   class User extends Model<UserAttributes, UserCreationAttributes> implements UserInstance {
@@ -10,6 +10,7 @@ export default function(sequelize: Sequelize) {
     public password!: string;
     public firstName!: string;
     public lastName!: string;
+    public role!: UserRole;
     public isActive!: boolean;
     public lastLoginAt?: Date;
     public readonly createdAt!: Date;
@@ -76,6 +77,11 @@ export default function(sequelize: Sequelize) {
       validate: {
         len: [1, 50]
       }
+    },
+    role: {
+      type: DataTypes.ENUM(...Object.values(UserRole)),
+      allowNull: false,
+      defaultValue: UserRole.USER
     },
     isActive: {
       type: DataTypes.BOOLEAN,
