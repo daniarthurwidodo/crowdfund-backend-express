@@ -57,14 +57,14 @@ export default function(sequelize: Sequelize) {
       defaultValue: []
     },
     targetAmount: {
-      type: DataTypes.DECIMAL(12, 2),
+      type: DataTypes.DECIMAL(15, 0),
       allowNull: false,
       validate: {
-        min: 1
+        min: 1000
       }
     },
     currentAmount: {
-      type: DataTypes.DECIMAL(12, 2),
+      type: DataTypes.DECIMAL(15, 0),
       defaultValue: 0,
       validate: {
         min: 0

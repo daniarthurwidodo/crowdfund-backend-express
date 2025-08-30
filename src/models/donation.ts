@@ -41,10 +41,10 @@ export default function(sequelize: Sequelize) {
       primaryKey: true
     },
     amount: {
-      type: DataTypes.DECIMAL(10, 2),
+      type: DataTypes.DECIMAL(15, 0),
       allowNull: false,
       validate: {
-        min: 1
+        min: 1000
       }
     },
     isAnonymous: {

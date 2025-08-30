@@ -157,7 +157,8 @@ const getRandomNumber = (min: number, max: number): number => {
 };
 
 const getRandomAmount = (min: number, max: number): number => {
-  return Math.round((Math.random() * (max - min) + min) * 100) / 100;
+  // For IDR, return whole numbers (no decimals)
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
 const getRandomDate = (start: Date, end: Date): Date => {
@@ -212,7 +213,7 @@ const generateProjects = (fundraisers: any[], count: number): ProjectData[] => {
     const fundraiser = getRandomItem(fundraisers);
     const title = getRandomItem(projectTitles);
     const description = getRandomItem(projectDescriptions);
-    const targetAmount = getRandomAmount(500, 50000);
+    const targetAmount = getRandomAmount(5000000, 500000000); // 5M to 500M IDR
     
     // Generate realistic date ranges
     const startDate = getRandomDate(
@@ -263,7 +264,7 @@ const generateDonations = (users: any[], projects: any[]): DonationData[] => {
     
     for (let i = 0; i < donationCount; i++) {
       const isAnonymous = Math.random() > 0.7; // 30% anonymous
-      const amount = getRandomAmount(5, Math.min(1000, project.targetAmount * 0.3));
+      const amount = getRandomAmount(50000, Math.min(10000000, project.targetAmount * 0.3)); // 50K to 10M IDR max
       
       let donationData: DonationData = {
         amount,
@@ -401,7 +402,7 @@ const seedDatabase = async (): Promise<void> => {
     console.log(`👥 Users: ${stats.users.total} (${stats.users.regular} users, ${stats.users.fundraisers} fundraisers)`);
     console.log(`📊 Projects: ${stats.projects.total} (${stats.projects.active} active, ${stats.projects.closed} closed, ${stats.projects.cancelled} cancelled)`);
     console.log(`💰 Donations: ${stats.donations.total} (${stats.donations.anonymous} anonymous, ${stats.donations.authenticated} authenticated)`);
-    console.log(`💵 Total Amount: $${stats.donations.totalAmount.toLocaleString()}`);
+    console.log(`💵 Total Amount: IDR ${stats.donations.totalAmount.toLocaleString()}`);
     console.log('\n✨ You can now test the API with realistic data!');
     
     await sequelize.close();

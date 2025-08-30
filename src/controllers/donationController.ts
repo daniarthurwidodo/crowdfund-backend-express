@@ -8,7 +8,7 @@ import { createChildLogger } from '../config/logger';
 const logger = createChildLogger('DonationController');
 
 const donationSchema = Joi.object({
-  amount: Joi.number().min(1).required(),
+  amount: Joi.number().integer().min(1000).max(1000000000).required(), // Min 1,000 IDR, Max 1B IDR
   isAnonymous: Joi.boolean().default(false),
   donorName: Joi.string().min(1).max(100).when('isAnonymous', {
     is: true,

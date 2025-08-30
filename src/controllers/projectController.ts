@@ -11,7 +11,7 @@ const projectSchema = Joi.object({
   title: Joi.string().min(5).max(200).required(),
   description: Joi.string().min(20).max(5000).required(),
   images: Joi.array().items(Joi.string().uri()).max(10).optional(),
-  targetAmount: Joi.number().min(1).required(),
+  targetAmount: Joi.number().integer().min(1000).max(10000000000).required(), // Min 1,000 IDR, Max 10B IDR
   startDate: Joi.date().required(),
   endDate: Joi.date().greater(Joi.ref('startDate')).required()
 });
@@ -20,7 +20,7 @@ const updateProjectSchema = Joi.object({
   title: Joi.string().min(5).max(200).optional(),
   description: Joi.string().min(20).max(5000).optional(),
   images: Joi.array().items(Joi.string().uri()).max(10).optional(),
-  targetAmount: Joi.number().min(1).optional(),
+  targetAmount: Joi.number().integer().min(1000).max(10000000000).optional(), // Min 1,000 IDR, Max 10B IDR
   endDate: Joi.date().optional(),
   status: Joi.string().valid(...Object.values(ProjectStatus)).optional()
 });
