@@ -91,9 +91,9 @@
   - [ ] create backups/restore strategy and document it
   - [ ] add transactional boundaries where needed (fund transfers / donations)
 
-- [ ] Payments
-  - [ ] expand Xendit plan: sample flows (invoice, VA, e-wallet), retry logic, settlement handling
-  - [ ] add reconciliation job to sync payment status
+- [x] Payments
+  - [x] expand Xendit plan: sample flows (invoice, VA, e-wallet), retry logic, settlement handling
+  - [x] add reconciliation job to sync payment status
 
 - [ ] Performance & Scalability
   - [ ] cache frequent reads with Redis and add cache invalidation strategy

@@ -14,8 +14,10 @@ import projectRoutes from './routes/projects';
 import donationRoutes from './routes/donations';
 import uploadRoutes from './routes/uploads';
 import paymentRoutes from './routes/payments';
+import adminRoutes from './routes/admin';
 import swaggerSpecs from './config/swagger';
 import { ProjectScheduler } from './services/projectScheduler';
+import { jobScheduler } from './jobs/scheduler';
 import { logger, httpLogger } from './config/logger';
 import { initializeUploadDirectories } from './utils/imageUpload';
 
@@ -108,6 +110,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   explorer: true,
@@ -159,6 +162,9 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
       scheduler.stop();
     }
 
+    logger.info('Stopping payment reconciliation scheduler...');
+    jobScheduler.stop();
+
     logger.info('Closing Redis connection...');
     if (redisClient.isOpen) {
       await redisClient.quit();
@@ -207,8 +213,14 @@ const startServer = async (): Promise<void> => {
     // Initialize upload directories
     initializeUploadDirectories();
     
+    // Initialize project scheduler
     scheduler = ProjectScheduler.getInstance();
     scheduler.start();
+    
+    // Initialize payment reconciliation job scheduler
+    jobScheduler.initialize();
+    jobScheduler.start();
+    logger.info('Payment reconciliation scheduler initialized and started');
     
     server = app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
