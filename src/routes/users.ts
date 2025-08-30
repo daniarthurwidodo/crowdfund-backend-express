@@ -5,8 +5,195 @@ import { User } from '../models';
 import { authenticateToken } from '../middleware/auth';
 import { requireAdmin, requireAdminOrSelf } from '../middleware/roleAuth';
 import { UserRole } from '../types';
+import { 
+  getProfile, 
+  updateProfile, 
+  changePassword, 
+  deleteAvatar, 
+  getUserStats,
+  getUserById 
+} from '../controllers/userController';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/profile', authenticateToken, getProfile);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update current user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *               lastName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *               username:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 30
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.put('/profile', authenticateToken, updateProfile);
+
+/**
+ * @swagger
+ * /api/users/change-password:
+ *   post:
+ *     summary: Change user password
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 minLength: 6
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 128
+ *               confirmPassword:
+ *                 type: string
+ *                 description: Must match newPassword
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Validation error or current password incorrect
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/change-password', authenticateToken, changePassword);
+
+/**
+ * @swagger
+ * /api/users/avatar:
+ *   delete:
+ *     summary: Delete user avatar
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: No avatar to delete
+ *       401:
+ *         description: Unauthorized
+ */
+router.delete('/avatar', authenticateToken, deleteAvatar);
+
+/**
+ * @swagger
+ * /api/users/stats:
+ *   get:
+ *     summary: Get current user statistics
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     totalDonations:
+ *                       type: integer
+ *                     totalDonated:
+ *                       type: number
+ *                     projectsSupported:
+ *                       type: integer
+ *                     totalProjects:
+ *                       type: integer
+ *                       description: For fundraisers only
+ *                     totalRaised:
+ *                       type: number
+ *                       description: For fundraisers only
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/stats', authenticateToken, getUserStats);
 
 const updateUserSchema = Joi.object({
   firstName: Joi.string().min(1).max(50).optional(),
@@ -178,21 +365,7 @@ router.get('/', authenticateToken, requireAdmin, async (req: Request, res: Respo
  *       404:
  *         description: User not found
  */
-router.get('/:id', authenticateToken, requireAdminOrSelf, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const user = await User.findByPk(req.params.id);
-    
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-
-    res.json({ user: user.toJSON() });
-  } catch (error) {
-    console.error('Get user by ID error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+router.get('/:id', authenticateToken, getUserById);
 
 /**
  * @swagger

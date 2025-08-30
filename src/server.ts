@@ -16,6 +16,7 @@ import uploadRoutes from './routes/uploads';
 import swaggerSpecs from './config/swagger';
 import { ProjectScheduler } from './services/projectScheduler';
 import { logger, httpLogger } from './config/logger';
+import { initializeUploadDirectories } from './utils/imageUpload';
 
 dotenv.config();
 
@@ -200,6 +201,9 @@ const startServer = async (): Promise<void> => {
       await sequelize.sync();
       logger.info('Database synchronized.');
     }
+    
+    // Initialize upload directories
+    initializeUploadDirectories();
     
     scheduler = ProjectScheduler.getInstance();
     scheduler.start();

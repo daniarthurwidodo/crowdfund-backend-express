@@ -8,17 +8,35 @@ import { createChildLogger } from '../config/logger';
 
 const logger = createChildLogger('ImageUpload');
 
-// Ensure upload directories exist
-const uploadsDir = path.join(process.cwd(), 'uploads');
-const avatarsDir = path.join(uploadsDir, 'avatars');
-const projectsDir = path.join(uploadsDir, 'projects');
+// Initialize upload directories
+export const initializeUploadDirectories = (): void => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const avatarsDir = path.join(uploadsDir, 'avatars');
+  const projectsDir = path.join(uploadsDir, 'projects');
 
-[uploadsDir, avatarsDir, projectsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    logger.info(`Created directory: ${dir}`);
-  }
-});
+  const directories = [uploadsDir, avatarsDir, projectsDir];
+  
+  directories.forEach(dir => {
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        logger.info(`Created upload directory: ${dir}`);
+      } else {
+        // Verify write permissions
+        fs.accessSync(dir, fs.constants.W_OK);
+        logger.debug(`Upload directory verified: ${dir}`);
+      }
+    } catch (error) {
+      logger.error({ err: error, dir }, `Failed to initialize upload directory: ${dir}`);
+      throw new Error(`Cannot create or access upload directory: ${dir}`);
+    }
+  });
+  
+  logger.info('Upload directories initialized successfully');
+};
+
+// Initialize directories immediately (for backwards compatibility)
+initializeUploadDirectories();
 
 // Image processing configurations
 const AVATAR_SIZE = 400;
@@ -50,6 +68,8 @@ const upload = multer({
 // Process and save avatar image
 export const processAvatar = async (buffer: Buffer, filename: string): Promise<string> => {
   try {
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const avatarsDir = path.join(uploadsDir, 'avatars');
     const outputPath = path.join(avatarsDir, `${filename}.webp`);
     
     await sharp(buffer)
@@ -72,6 +92,8 @@ export const processAvatar = async (buffer: Buffer, filename: string): Promise<s
 // Process and save project image
 export const processProjectImage = async (buffer: Buffer, filename: string): Promise<string> => {
   try {
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const projectsDir = path.join(uploadsDir, 'projects');
     const outputPath = path.join(projectsDir, `${filename}.webp`);
     
     await sharp(buffer)

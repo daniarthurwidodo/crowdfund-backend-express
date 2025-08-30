@@ -7,7 +7,8 @@ import {
   getProjectById,
   updateProject,
   deleteProject,
-  getMyProjects
+  getMyProjects,
+  removeProjectImage
 } from '../controllers/projectController';
 
 const router = Router();
@@ -350,5 +351,55 @@ router.put('/:id', authenticateToken, updateProject);
  *         description: Project not found
  */
 router.delete('/:id', authenticateToken, deleteProject);
+
+/**
+ * @swagger
+ * /api/projects/{id}/remove-image:
+ *   post:
+ *     summary: Remove an image from a project
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Project ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - imageUrl
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 description: URL of the image to remove
+ *     responses:
+ *       200:
+ *         description: Image removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 project:
+ *                   $ref: '#/components/schemas/Project'
+ *       400:
+ *         description: Validation error or image not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to modify this project
+ *       404:
+ *         description: Project not found
+ */
+router.post('/:id/remove-image', authenticateToken, removeProjectImage);
 
 export default router;

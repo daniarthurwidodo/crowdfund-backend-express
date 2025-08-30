@@ -4,8 +4,32 @@ import Joi from 'joi';
 import { Project, User, Donation } from '../models';
 import { ProjectStatus, UserRole } from '../types';
 import { createChildLogger } from '../config/logger';
+import { deleteImage } from '../utils/imageUpload';
 
 const logger = createChildLogger('ProjectController');
+
+// Helper function to clean up project images
+const cleanupProjectImages = async (images: string[]): Promise<void> => {
+  for (const imagePath of images) {
+    try {
+      await deleteImage(imagePath);
+      logger.info(`Cleaned up project image: ${imagePath}`);
+    } catch (error) {
+      logger.error({ err: error, imagePath }, 'Failed to cleanup project image');
+    }
+  }
+};
+
+// Helper function to check project ownership or admin
+const checkProjectAuthorization = (project: any, userId: string, userRole: string): boolean => {
+  return userRole === UserRole.ADMIN || project.fundraiserId === userId;
+};
+
+// Helper function to validate image URLs
+const validateImageUrls = (images: string[]): boolean => {
+  const urlRegex = /^\/uploads\/(projects|avatars)\/[^/]+\.(webp|jpg|jpeg|png)$/i;
+  return images.every(url => urlRegex.test(url));
+};
 
 const projectSchema = Joi.object({
   title: Joi.string().min(5).max(200).required(),
@@ -198,12 +222,14 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (req.user?.role !== UserRole.ADMIN && project.fundraiserId !== req.user?.id) {
+    // Enhanced authorization check
+    if (!req.user || !checkProjectAuthorization(project, req.user.id, req.user.role)) {
       res.status(403).json({ message: 'Not authorized to update this project' });
       return;
     }
 
-    if (project.status === ProjectStatus.CLOSED) {
+    // Prevent updates to closed projects (except by admins)
+    if (project.status === ProjectStatus.CLOSED && req.user?.role !== UserRole.ADMIN) {
       res.status(400).json({ message: 'Cannot update closed project' });
       return;
     }
@@ -211,6 +237,30 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (value.endDate && value.endDate <= new Date()) {
       res.status(400).json({ message: 'End date must be in the future' });
       return;
+    }
+
+    // Validate image URLs if provided
+    if (value.images && value.images.length > 0) {
+      if (!validateImageUrls(value.images)) {
+        res.status(400).json({ 
+          message: 'Invalid image URLs. Images must be uploaded through the proper upload endpoint.' 
+        });
+        return;
+      }
+    }
+
+    // Clean up old images if images are being updated
+    if (value.images && project.images) {
+      const oldImages = project.images || [];
+      const newImages = value.images || [];
+      const imagesToDelete = oldImages.filter((img: string) => !newImages.includes(img));
+      
+      if (imagesToDelete.length > 0) {
+        // Clean up old images asynchronously to not block the response
+        cleanupProjectImages(imagesToDelete).catch(error => {
+          logger.error({ err: error, projectId: id }, 'Failed to cleanup old project images');
+        });
+      }
     }
 
     await project.update(value);
@@ -221,6 +271,8 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
         attributes: ['id', 'username', 'firstName', 'lastName']
       }]
     });
+
+    logger.info(`Project ${id} updated by user ${req.user?.id}`);
 
     res.json({
       message: 'Project updated successfully',
@@ -242,20 +294,92 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (req.user?.role !== UserRole.ADMIN && project.fundraiserId !== req.user?.id) {
+    // Enhanced authorization check
+    if (!req.user || !checkProjectAuthorization(project, req.user.id, req.user.role)) {
       res.status(403).json({ message: 'Not authorized to delete this project' });
       return;
     }
 
-    if (project.currentAmount > 0) {
-      res.status(400).json({ message: 'Cannot delete project with donations' });
+    // Only allow deletion of projects with no donations (or allow admins to force delete)
+    if (project.currentAmount > 0 && req.user?.role !== UserRole.ADMIN) {
+      res.status(400).json({ message: 'Cannot delete project with donations. Contact administrator.' });
       return;
     }
 
+    // Store images to clean up after deletion
+    const imagesToCleanup = project.images || [];
+
     await project.destroy();
+
+    // Clean up project images after successful deletion
+    if (imagesToCleanup.length > 0) {
+      cleanupProjectImages(imagesToCleanup).catch(error => {
+        logger.error({ err: error, projectId: id }, 'Failed to cleanup project images after deletion');
+      });
+    }
+
+    logger.info(`Project ${id} deleted by user ${req.user?.id}`);
     res.json({ message: 'Project deleted successfully' });
   } catch (error: any) {
     logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error deleting project');
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const removeProjectImage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      res.status(400).json({ message: 'Image URL is required' });
+      return;
+    }
+
+    const project = await Project.findByPk(id);
+    if (!project) {
+      res.status(404).json({ message: 'Project not found' });
+      return;
+    }
+
+    // Enhanced authorization check
+    if (!req.user || !checkProjectAuthorization(project, req.user.id, req.user.role)) {
+      res.status(403).json({ message: 'Not authorized to modify this project' });
+      return;
+    }
+
+    const currentImages = project.images || [];
+    if (!currentImages.includes(imageUrl)) {
+      res.status(400).json({ message: 'Image not found in project' });
+      return;
+    }
+
+    // Remove image from project
+    const updatedImages = currentImages.filter((img: string) => img !== imageUrl);
+    await project.update({ images: updatedImages });
+
+    // Clean up the image file
+    try {
+      await deleteImage(imageUrl);
+      logger.info(`Removed image ${imageUrl} from project ${id}`);
+    } catch (error) {
+      logger.error({ err: error, imageUrl }, 'Failed to delete image file');
+    }
+
+    await project.reload({
+      include: [{
+        model: User,
+        as: 'fundraiser',
+        attributes: ['id', 'username', 'firstName', 'lastName']
+      }]
+    });
+
+    res.json({
+      message: 'Image removed successfully',
+      project
+    });
+  } catch (error: any) {
+    logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error removing project image');
     res.status(500).json({ message: 'Internal server error' });
   }
 };
