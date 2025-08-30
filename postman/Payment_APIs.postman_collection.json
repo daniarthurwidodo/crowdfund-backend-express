@@ -1,0 +1,349 @@
+{
+  "info": {
+    "name": "Crowdfund Payment APIs",
+    "description": "Collection for testing payment functionality with Xendit integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Payment Methods",
+      "item": [
+        {
+          "name": "Get Payment Methods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/methods",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "methods"]
+            },
+            "description": "Get available payment methods (Invoice, Virtual Account, E-wallet)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoice Payments",
+      "item": [
+        {
+          "name": "Create Invoice Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donationId\": \"{{donationId}}\",\n  \"description\": \"Donation payment via invoice\",\n  \"payerEmail\": \"donor@example.com\",\n  \"paymentMethods\": [\"BANK_TRANSFER\", \"CREDIT_CARD\", \"EWALLET\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/invoice",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "invoice"]
+            },
+            "description": "Create an invoice payment for a donation"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Virtual Account Payments",
+      "item": [
+        {
+          "name": "Create VA Payment - BCA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donationId\": \"{{donationId}}\",\n  \"bankCode\": \"BCA\",\n  \"customerName\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/virtual-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "virtual-account"]
+            },
+            "description": "Create a BCA virtual account payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Create VA Payment - BNI",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donationId\": \"{{donationId}}\",\n  \"bankCode\": \"BNI\",\n  \"customerName\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/virtual-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "virtual-account"]
+            },
+            "description": "Create a BNI virtual account payment"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "E-wallet Payments",
+      "item": [
+        {
+          "name": "Create E-wallet Payment - DANA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donationId\": \"{{donationId}}\",\n  \"ewalletType\": \"DANA\",\n  \"phone\": \"08123456789\",\n  \"redirectUrl\": \"{{baseUrl}}/payment-success\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/ewallet",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "ewallet"]
+            },
+            "description": "Create a DANA e-wallet payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Create E-wallet Payment - OVO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donationId\": \"{{donationId}}\",\n  \"ewalletType\": \"OVO\",\n  \"phone\": \"08123456789\",\n  \"redirectUrl\": \"{{baseUrl}}/payment-success\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/ewallet",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "ewallet"]
+            },
+            "description": "Create an OVO e-wallet payment"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment Management",
+      "item": [
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "{{paymentId}}", "status"]
+            },
+            "description": "Get current status of a payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "{{paymentId}}", "cancel"]
+            },
+            "description": "Cancel a pending payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/my?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "PAID",
+                  "disabled": true
+                },
+                {
+                  "key": "method",
+                  "value": "INVOICE",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get current user's payments with pagination and filtering"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Xendit Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-callback-token",
+                "value": "{{xenditWebhookToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"webhook-id-123\",\n  \"external_id\": \"donation-123-456\",\n  \"user_id\": \"xendit-user-id\",\n  \"is_high\": false,\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"status\": \"PAID\",\n  \"merchant_name\": \"Crowdfund Platform\",\n  \"amount\": 100000,\n  \"paid_amount\": 100000,\n  \"bank_code\": \"BCA\",\n  \"paid_at\": \"2023-12-01T10:00:00Z\",\n  \"payer_email\": \"donor@example.com\",\n  \"description\": \"Donation payment\",\n  \"adjusted_received_amount\": 100000,\n  \"fees_paid_amount\": 0,\n  \"updated\": \"2023-12-01T10:00:00Z\",\n  \"created\": \"2023-12-01T09:50:00Z\",\n  \"currency\": \"IDR\",\n  \"payment_channel\": \"BCA\",\n  \"payment_destination\": \"8808123456789\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "webhook"]
+            },
+            "description": "Simulate Xendit webhook callback"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Webhook (Dev Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"external_id\": \"donation-123-456\",\n  \"status\": \"PAID\",\n  \"payment_method\": \"BANK_TRANSFER\",\n  \"amount\": 100000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/webhook/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "webhook", "test"]
+            },
+            "description": "Test webhook processing (development only)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "your-jwt-token-here",
+      "type": "string"
+    },
+    {
+      "key": "donationId",
+      "value": "your-donation-id-here",
+      "type": "string",
+      "description": "26-character ULID of the donation"
+    },
+    {
+      "key": "paymentId",
+      "value": "your-payment-id-here",
+      "type": "string",
+      "description": "26-character ULID of the payment"
+    },
+    {
+      "key": "xenditWebhookToken",
+      "value": "your-xendit-webhook-token",
+      "type": "string",
+      "description": "Xendit webhook verification token"
+    }
+  ]
+}

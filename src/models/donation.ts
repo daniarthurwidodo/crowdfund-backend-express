@@ -1,11 +1,13 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
-import { DonationAttributes, DonationCreationAttributes, DonationInstance } from '../types';
+import { DonationAttributes, DonationCreationAttributes, DonationInstance, PaymentStatus, PaymentMethod } from '../types';
 import { generateULID } from '../utils/ulid';
 
 export default function(sequelize: Sequelize) {
   class Donation extends Model<DonationAttributes, DonationCreationAttributes> implements DonationInstance {
     public id!: string;
     public amount!: number;
+    public paymentStatus!: PaymentStatus;
+    public paymentMethod?: PaymentMethod;
     public isAnonymous!: boolean;
     public donorName?: string;
     public message?: string;
@@ -32,6 +34,10 @@ export default function(sequelize: Sequelize) {
         foreignKey: 'userId',
         as: 'user'
       });
+      Donation.hasMany(models.Payment, {
+        foreignKey: 'donationId',
+        as: 'payments'
+      });
     }
   }
 
@@ -47,6 +53,15 @@ export default function(sequelize: Sequelize) {
       validate: {
         min: 1000
       }
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM(...Object.values(PaymentStatus)),
+      allowNull: false,
+      defaultValue: PaymentStatus.PENDING
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM(...Object.values(PaymentMethod)),
+      allowNull: true
     },
     isAnonymous: {
       type: DataTypes.BOOLEAN,
@@ -94,15 +109,23 @@ export default function(sequelize: Sequelize) {
     sequelize,
     timestamps: true,
     tableName: 'donations',
+    underscored: true,
     hooks: {
-      afterCreate: async (donation: Donation) => {
-        const { Project } = sequelize.models;
-        const project = await Project.findByPk(donation.projectId) as any;
-        if (project) {
-          await project.increment('currentAmount', { by: donation.amount });
-          await project.reload();
-          if ((project.get('currentAmount') as number) >= (project.get('targetAmount') as number)) {
-            await project.update({ status: 'CLOSED' });
+      afterUpdate: async (donation: Donation) => {
+        // Only process project amount updates when payment is confirmed
+        if (donation.paymentStatus === PaymentStatus.PAID) {
+          const { Project } = sequelize.models;
+          const project = await Project.findByPk(donation.projectId) as any;
+          if (project) {
+            // Check if this is the first time the payment is being marked as paid
+            const previousValues = donation.previous() as any;
+            if (previousValues?.paymentStatus !== PaymentStatus.PAID) {
+              await project.increment('currentAmount', { by: donation.amount });
+              await project.reload();
+              if ((project.get('currentAmount') as number) >= (project.get('targetAmount') as number)) {
+                await project.update({ status: 'CLOSED' });
+              }
+            }
           }
         }
       }

@@ -81,6 +81,8 @@ export interface ProjectInstance extends Model<ProjectAttributes, ProjectCreatio
 export interface DonationAttributes {
   id: string;
   amount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod;
   isAnonymous: boolean;
   donorName?: string;
   message?: string;
@@ -98,4 +100,109 @@ export interface DonationCreationAttributes extends Omit<DonationAttributes, 'id
 
 export interface DonationInstance extends Model<DonationAttributes, DonationCreationAttributes>, DonationAttributes {
   toJSON(): DonationAttributes;
+}
+
+// Payment-related types
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  EXPIRED = 'EXPIRED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum PaymentMethod {
+  INVOICE = 'INVOICE',
+  VIRTUAL_ACCOUNT = 'VIRTUAL_ACCOUNT',
+  EWALLET = 'EWALLET',
+  CARD = 'CARD'
+}
+
+export interface PaymentAttributes {
+  id: string;
+  donationId: string;
+  externalId: string; // Xendit external ID
+  xenditId?: string; // Xendit internal ID
+  amount: number;
+  currency: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  paymentUrl?: string;
+  virtualAccount?: {
+    bankCode: string;
+    accountNumber: string;
+  };
+  ewalletType?: string;
+  paidAt?: Date;
+  expiredAt?: Date;
+  failureCode?: string;
+  webhookData?: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PaymentCreationAttributes extends Omit<PaymentAttributes, 'id' | 'createdAt' | 'updatedAt'> {
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface PaymentInstance extends Model<PaymentAttributes, PaymentCreationAttributes>, PaymentAttributes {
+  toJSON(): PaymentAttributes;
+}
+
+// Xendit API types
+export interface XenditInvoiceRequest {
+  external_id: string;
+  amount: number;
+  payer_email?: string;
+  description: string;
+  invoice_duration?: number;
+  callback_virtual_account_id?: string;
+  should_send_email?: boolean;
+  should_authenticate_credit_card?: boolean;
+  currency?: string;
+  payment_methods?: string[];
+}
+
+export interface XenditVARequest {
+  external_id: string;
+  bank_code: string;
+  name: string;
+  expected_amount?: number;
+  is_closed?: boolean;
+  expiration_date?: string;
+  is_single_use?: boolean;
+}
+
+export interface XenditEwalletRequest {
+  external_id: string;
+  amount: number;
+  phone?: string;
+  ewallet_type: string;
+  callback_url?: string;
+  redirect_url?: string;
+}
+
+export interface XenditWebhookPayload {
+  id: string;
+  external_id: string;
+  user_id: string;
+  is_high: boolean;
+  payment_method: string;
+  status: string;
+  merchant_name: string;
+  amount: number;
+  paid_amount?: number;
+  bank_code?: string;
+  paid_at?: string;
+  payer_email?: string;
+  description: string;
+  adjusted_received_amount?: number;
+  fees_paid_amount?: number;
+  updated: string;
+  created: string;
+  currency: string;
+  payment_channel?: string;
+  payment_destination?: string;
 }

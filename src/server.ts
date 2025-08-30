@@ -13,6 +13,7 @@ import userRoutes from './routes/users';
 import projectRoutes from './routes/projects';
 import donationRoutes from './routes/donations';
 import uploadRoutes from './routes/uploads';
+import paymentRoutes from './routes/payments';
 import swaggerSpecs from './config/swagger';
 import { ProjectScheduler } from './services/projectScheduler';
 import { logger, httpLogger } from './config/logger';
@@ -106,6 +107,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   explorer: true,

@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { sequelize, User, Project, Donation } from '../models';
-import { UserRole, ProjectStatus } from '../types';
+import { UserRole, ProjectStatus, PaymentStatus } from '../types';
 import { logger } from '../config/logger';
 
 dotenv.config();
@@ -28,6 +28,7 @@ interface ProjectData {
 
 interface DonationData {
   amount: number;
+  paymentStatus: PaymentStatus;
   isAnonymous: boolean;
   donorName?: string;
   message?: string;
@@ -268,6 +269,7 @@ const generateDonations = (users: any[], projects: any[]): DonationData[] => {
       
       let donationData: DonationData = {
         amount,
+        paymentStatus: PaymentStatus.PAID, // For seed data, make all donations paid
         isAnonymous,
         projectId: project.id
       };
