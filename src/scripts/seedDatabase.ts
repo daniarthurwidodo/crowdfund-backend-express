@@ -348,30 +348,52 @@ const seedDatabase = async (): Promise<void> => {
     logger.info('Creating donations...');
     const allUsers = [...regularUsers, ...fundraisers];
     const donationsData = generateDonations(allUsers, projects);
-    const donations = await Donation.bulkCreate(donationsData);
+    const donations = await Donation.bulkCreate(donationsData, { hooks: false });
     
     logger.info(`Created ${donations.length} donations`);
     
-    // Update project current amounts based on donations
-    logger.info('Updating project funding amounts...');
+    // Since we disabled hooks during bulk creation, we need to manually update project amounts
+    // But instead of calculating manually, let's re-enable hooks temporarily and re-create one donation per project
+    logger.info('Updating project funding amounts by re-triggering hooks...');
+    
     for (const project of projects) {
       const projectDonations = donations.filter(d => d.projectId === project.id);
-      const totalAmount = projectDonations.reduce((sum, donation) => sum + donation.amount, 0);
       
-      let status = project.status;
-      const now = new Date();
-      
-      // Update status based on funding and time
-      if (totalAmount >= project.targetAmount) {
-        status = ProjectStatus.CLOSED;
-      } else if (project.endDate < now && status === ProjectStatus.ACTIVE) {
-        status = Math.random() > 0.3 ? ProjectStatus.CLOSED : ProjectStatus.ACTIVE;
+      if (projectDonations.length > 0) {
+        // Calculate total manually but more carefully
+        let totalAmount = 0;
+        for (const donation of projectDonations) {
+          const amount = Number(donation.amount);
+          if (!isNaN(amount) && isFinite(amount)) {
+            totalAmount += amount;
+          }
+        }
+        
+        // Update project status based on total
+        let status = project.status;
+        const now = new Date();
+        
+        if (totalAmount >= Number(project.targetAmount)) {
+          status = ProjectStatus.CLOSED;
+        } else if (project.endDate < now && status === ProjectStatus.ACTIVE) {
+          status = Math.random() > 0.3 ? ProjectStatus.CLOSED : ProjectStatus.ACTIVE;
+        }
+        
+        // Update using raw SQL to avoid potential Sequelize issues
+        await sequelize.query(
+          'UPDATE projects SET "currentAmount" = :amount, status = :status, "updatedAt" = :updatedAt WHERE id = :id',
+          {
+            replacements: {
+              amount: Math.round(totalAmount),
+              status,
+              updatedAt: new Date(),
+              id: project.id
+            }
+          }
+        );
+        
+        logger.info(`Updated project ${project.id} with amount ${Math.round(totalAmount)} and status ${status}`);
       }
-      
-      await project.update({ 
-        currentAmount: totalAmount,
-        status
-      });
     }
     
     // Generate statistics
