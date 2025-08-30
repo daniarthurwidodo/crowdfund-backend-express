@@ -12,6 +12,11 @@
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "seed": "sequelize-cli db:seed:all",
     "seed:undo": "sequelize-cli db:seed:undo:all",
+    "seed:dummy": "ts-node src/scripts/seedDatabase.ts",
+    "seed:admin": "ts-node src/scripts/createAdminUsers.ts",
+    "db:clear": "ts-node src/scripts/clearDatabase.ts",
+    "db:reset": "npm run db:clear && npm run seed:dummy",
+    "db:setup": "npm run migrate && npm run seed:admin",
     "db:create": "sequelize-cli db:create",
     "db:drop": "sequelize-cli db:drop"
   },

@@ -127,6 +127,11 @@ CORS_ORIGIN=http://localhost:3000
 - `npm run migrate` - Run database migrations
 - `npm run migrate:undo` - Undo last migration
 - `npm run seed` - Run database seeders
+- `npm run seed:dummy` - Seed database with realistic test data (40 users, 20 projects)
+- `npm run seed:admin` - Create admin test users only
+- `npm run db:clear` - Clear all data from database (with confirmation)
+- `npm run db:reset` - Clear database and re-seed with dummy data
+- `npm run db:setup` - Run migrations and create admin users
 - `npm run db:create` - Create database
 - `npm run db:drop` - Drop database
 
@@ -139,15 +144,71 @@ CORS_ORIGIN=http://localhost:3000
 - `POST /api/auth/logout` - Logout user (requires auth)
 - `GET /api/auth/me` - Get current user profile (requires auth)
 
+### Users
+- `GET /api/users` - List all users (admin only)
+- `GET /api/users/:id` - Get user by ID
+- `PUT /api/users/:id` - Update user profile
+- `PATCH /api/users/:id/activate` - Activate user (admin)
+- `PATCH /api/users/:id/deactivate` - Deactivate user (admin)
+
+### Projects
+- `GET /api/projects` - List projects (with search, filters, pagination)
+- `POST /api/projects` - Create new project (fundraisers only)
+- `GET /api/projects/:id` - Get project details with donations
+- `PUT /api/projects/:id` - Update project (owner or admin)
+- `DELETE /api/projects/:id` - Delete project (owner or admin)
+- `GET /api/projects/my` - Get current user's projects
+
+### Donations
+- `GET /api/donations` - List donations (with filters)
+- `POST /api/donations` - Create donation (anonymous or authenticated)
+- `GET /api/donations/:id` - Get donation details
+- `GET /api/donations/my` - Get current user's donations
+- `GET /api/donations/project/:id` - Get donations for specific project
+
 ### Health Checks
 
 - `GET /health` - Service health status
 - `GET /health/ready` - Readiness probe
 - `GET /health/live` - Liveness probe
+- `POST /shutdown` - Graceful shutdown (development only)
 
 ### Documentation
 
 - `GET /api-docs` - Swagger UI documentation
+
+## 🧪 Test Data & Quick Start
+
+### Quick Setup with Test Data
+```bash
+# Setup database and create admin users
+npm run db:setup
+
+# Or seed with realistic dummy data for testing
+npm run seed:dummy
+```
+
+### Test User Credentials (after `npm run seed:admin`)
+```
+Admin User:
+  Email: admin@crowdfund.com
+  Password: admin123
+
+Fundraiser User:
+  Email: fundraiser@crowdfund.com  
+  Password: fundraiser123
+
+Regular User:
+  Email: user@crowdfund.com
+  Password: user123
+```
+
+### Dummy Data Overview (after `npm run seed:dummy`)
+- **40 Users**: 20 regular users + 20 fundraisers with unique emails
+- **20 Projects**: Realistic crowdfunding projects across various categories
+- **60-300 Donations**: Mix of anonymous and authenticated donations
+- **All Project States**: ACTIVE, CLOSED, CANCELLED for comprehensive testing
+- **Realistic Scenarios**: Some projects fully funded, others ongoing or expired
 
 ## 🔐 Authentication
 
