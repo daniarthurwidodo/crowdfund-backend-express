@@ -1,6 +1,7 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import { UserAttributes, UserCreationAttributes, UserInstance, UserRole } from '../types';
+import { generateULID } from '../utils/ulid';
 
 export default function(sequelize: Sequelize) {
   class User extends Model<UserAttributes, UserCreationAttributes> implements UserInstance {
@@ -37,8 +38,8 @@ export default function(sequelize: Sequelize) {
       allowNull: false
     },
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING(26),
+      defaultValue: generateULID,
       primaryKey: true
     },
     email: {

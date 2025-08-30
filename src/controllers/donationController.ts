@@ -4,6 +4,7 @@ import Joi from 'joi';
 import { Project, User, Donation } from '../models';
 import { ProjectStatus } from '../types';
 import { createChildLogger } from '../config/logger';
+import { isValidULID } from '../utils/ulid';
 
 const logger = createChildLogger('DonationController');
 
@@ -16,7 +17,14 @@ const donationSchema = Joi.object({
     otherwise: Joi.optional()
   }),
   message: Joi.string().max(500).optional(),
-  projectId: Joi.string().uuid().required()
+  projectId: Joi.string().length(26).custom((value, helpers) => {
+    if (!isValidULID(value)) {
+      return helpers.error('any.invalid');
+    }
+    return value;
+  }).required().messages({
+    'any.invalid': 'Project ID must be a valid ULID'
+  })
 });
 
 export const createDonation = async (req: Request, res: Response): Promise<void> => {

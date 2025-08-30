@@ -1,5 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import { ProjectAttributes, ProjectCreationAttributes, ProjectInstance, ProjectStatus } from '../types';
+import { generateULID } from '../utils/ulid';
 
 export default function(sequelize: Sequelize) {
   class Project extends Model<ProjectAttributes, ProjectCreationAttributes> implements ProjectInstance {
@@ -34,8 +35,8 @@ export default function(sequelize: Sequelize) {
 
   Project.init({
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING(26),
+      defaultValue: generateULID,
       primaryKey: true
     },
     title: {
@@ -91,7 +92,7 @@ export default function(sequelize: Sequelize) {
       defaultValue: ProjectStatus.ACTIVE
     },
     fundraiserId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(26),
       allowNull: false,
       references: {
         model: 'users',

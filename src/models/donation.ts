@@ -1,5 +1,6 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 import { DonationAttributes, DonationCreationAttributes, DonationInstance } from '../types';
+import { generateULID } from '../utils/ulid';
 
 export default function(sequelize: Sequelize) {
   class Donation extends Model<DonationAttributes, DonationCreationAttributes> implements DonationInstance {
@@ -36,8 +37,8 @@ export default function(sequelize: Sequelize) {
 
   Donation.init({
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.STRING(26),
+      defaultValue: generateULID,
       primaryKey: true
     },
     amount: {
@@ -66,7 +67,7 @@ export default function(sequelize: Sequelize) {
       }
     },
     projectId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(26),
       allowNull: false,
       references: {
         model: 'projects',
@@ -74,7 +75,7 @@ export default function(sequelize: Sequelize) {
       }
     },
     userId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(26),
       allowNull: true,
       references: {
         model: 'users',
