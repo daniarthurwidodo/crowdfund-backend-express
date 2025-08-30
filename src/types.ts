@@ -29,6 +29,7 @@ export interface UserAttributes {
   lastName: string;
   role: UserRole;
   isActive: boolean;
+  avatar?: string;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;

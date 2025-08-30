@@ -13,6 +13,7 @@ export default function(sequelize: Sequelize) {
     public lastName!: string;
     public role!: UserRole;
     public isActive!: boolean;
+    public avatar?: string;
     public lastLoginAt?: Date;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -87,6 +88,13 @@ export default function(sequelize: Sequelize) {
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
+    },
+    avatar: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
     },
     lastLoginAt: {
       type: DataTypes.DATE

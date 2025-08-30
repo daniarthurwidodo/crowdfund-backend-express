@@ -871,6 +871,43 @@
           }
         }
       ]
+    },
+    {
+      "name": "Uploads",
+      "item": [
+        {
+          "name": "Check Upload Folders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/uploads/check-folders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "uploads", "check-folders"]
+            }
+          }
+        },
+        {
+          "name": "Upload User Avatar",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/uploads/avatar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "uploads", "avatar"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

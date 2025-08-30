@@ -12,6 +12,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import projectRoutes from './routes/projects';
 import donationRoutes from './routes/donations';
+import uploadRoutes from './routes/uploads';
 import swaggerSpecs from './config/swagger';
 import { ProjectScheduler } from './services/projectScheduler';
 import { logger, httpLogger } from './config/logger';
@@ -36,6 +37,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded images statically
+app.use('/uploads', express.static('uploads'));
 
 redisClient.connect().catch((error) => logger.error('Redis connection error:', error));
 
@@ -100,6 +104,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/donations', donationRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
   explorer: true,
