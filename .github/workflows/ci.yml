@@ -1,0 +1,265 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+env:
+  NODE_VERSION: '18.x'
+  POSTGRES_VERSION: '14'
+  REDIS_VERSION: '6'
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: crowdfund_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:6-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Check for security vulnerabilities
+      run: npm audit --audit-level high
+
+    - name: Run linter
+      run: npm run lint
+
+    - name: Run type checking
+      run: npm run typecheck
+
+    - name: Create test environment file
+      run: |
+        cat << EOF > .env.test
+        NODE_ENV=test
+        JWT_SECRET=test_jwt_secret_key_for_ci
+        SESSION_SECRET=test_session_secret_for_ci
+        DB_HOST=localhost
+        DB_PORT=5432
+        DB_NAME=crowdfund_test
+        DB_USER=test_user
+        DB_PASSWORD=test_password
+        REDIS_HOST=localhost
+        REDIS_PORT=6379
+        REDIS_PASSWORD=
+        FRONTEND_URL=http://localhost:3000
+        CORS_ORIGIN=http://localhost:3000
+        XENDIT_SECRET_KEY=xnd_test_dummy_key
+        XENDIT_PUBLIC_KEY=xnd_public_test_dummy_key
+        XENDIT_CALLBACK_URL=http://localhost:3000/api/payments/webhook/xendit
+        MINIMUM_WITHDRAWAL_AMOUNT=10000
+        MAXIMUM_WITHDRAWAL_AMOUNT=100000000000
+        DEFAULT_PROCESSING_FEE_RATE=0.005
+        LOG_LEVEL=error
+        EOF
+
+    - name: Wait for services to be ready
+      run: |
+        sleep 10
+        npx wait-on tcp:localhost:5432
+        npx wait-on tcp:localhost:6379
+
+    - name: Run database migrations
+      run: npm run migrate
+      env:
+        NODE_ENV: test
+
+    - name: Run database schema validation
+      run: |
+        # Check if all models can sync with database
+        node -e "
+          require('dotenv').config({ path: '.env.test' });
+          const { sequelize } = require('./dist/models');
+          sequelize.authenticate()
+            .then(() => sequelize.sync({ force: false, logging: false }))
+            .then(() => { console.log('✓ Database schema validation passed'); process.exit(0); })
+            .catch(err => { console.error('✗ Schema validation failed:', err.message); process.exit(1); });
+        "
+
+    - name: Run tests with coverage
+      run: npm run test:coverage
+      env:
+        NODE_ENV: test
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      if: success()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage/lcov.info
+        fail_ci_if_error: false
+
+    - name: Build application
+      run: npm run build
+
+    - name: Test built application
+      run: |
+        # Start the built server in background and test health endpoint
+        timeout 30s npm start &
+        SERVER_PID=$!
+        sleep 10
+        curl -f http://localhost:3000/health || exit 1
+        kill $SERVER_PID
+      env:
+        NODE_ENV: production
+
+    - name: Archive build artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-files
+        path: |
+          dist/
+          package.json
+          package-lock.json
+        retention-days: 7
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run security audit
+      run: |
+        npm audit --audit-level moderate
+        npx audit-ci --moderate
+
+    - name: Check for secrets in code
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: master
+        head: HEAD
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: crowdfund-backend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, security, docker]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-files
+
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # e.g., deploy to Heroku, AWS, etc.
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, security, docker]
+    if: github.ref == 'refs/heads/master'
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-files
+
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        # Add your production deployment commands here
+        # e.g., deploy to Heroku, AWS, etc.
+
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: always()
+
+    steps:
+    - name: Notify success
+      if: needs.test.result == 'success' && needs.security.result == 'success'
+      run: |
+        echo "✅ All checks passed successfully!"
+        # Add notification logic here (Slack, email, etc.)
+
+    - name: Notify failure
+      if: needs.test.result == 'failure' || needs.security.result == 'failure'
+      run: |
+        echo "❌ Some checks failed. Please review the logs."
+        # Add failure notification logic here

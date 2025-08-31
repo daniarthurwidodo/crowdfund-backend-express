@@ -52,13 +52,20 @@
     - [x] added removeProjectImage() function with route for individual image removal
     - [x] improved error handling and logging throughout
 
-- [ ] CI / Devops
-  - [ ] add build step to run linter and tests
-  - [ ] run schema checks and DB migrations in CI
+- [x] CI / Devops
+  - [x] add build step to run linter and tests
+  - [x] run schema checks and DB migrations in CI
+  - [x] set up comprehensive GitHub Actions workflow with testing, security scanning, and deployment
+  - [x] add ESLint and Prettier configuration with TypeScript support
+  - [x] implement automated dependency auditing and secret detection
+  - [x] configure multi-environment deployment (staging/production)
 
-- [ ] Misc
-  - [ ] update README with setup, env vars, and DB visualization steps
-  - [ ] add example .env.example
+- [x] Misc
+  - [x] update README with setup, env vars, and DB visualization steps
+  - [x] add comprehensive .env.example with all required variables
+  - [x] document CI/CD pipeline and deployment procedures
+  - [x] add database schema visualization and management tools documentation
+  - [x] enhance API endpoints documentation with withdrawal and payment endpoints
 
 ## Additional suggestions (add these as checklist items)
 
