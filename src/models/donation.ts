@@ -120,7 +120,6 @@ export default function (sequelize: Sequelize) {
       sequelize,
       timestamps: true,
       tableName: 'donations',
-      underscored: true,
       hooks: {
         afterUpdate: async (donation: Donation) => {
           // Only process project amount updates when payment is confirmed

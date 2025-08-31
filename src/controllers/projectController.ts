@@ -166,7 +166,13 @@ export const getProjects = async (
       : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
-    const { count, rows: projects } = await Project.findAndCountAll({
+    // Get total count first (simpler query)
+    const totalItems = await Project.count({
+      where: whereClause,
+    });
+
+    // Get projects with associated data
+    const projects = await Project.findAll({
       where: whereClause,
       include: [
         {
@@ -196,11 +202,8 @@ export const getProjects = async (
       limit,
       offset,
       order: [[sortField, sortDirection]],
-      distinct: true,
       subQuery: false,
     });
-
-    const totalItems = Array.isArray(count) ? count.length : count;
     const totalPages = Math.ceil(totalItems / limit);
 
     res.json({
@@ -522,7 +525,13 @@ export const getMyProjects = async (
       : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
-    const { count, rows: projects } = await Project.findAndCountAll({
+    // Get total count first (simpler query)
+    const count = await Project.count({
+      where: whereClause,
+    });
+
+    // Get projects with associated data
+    const projects = await Project.findAll({
       where: whereClause,
       include: [
         {
@@ -555,7 +564,7 @@ export const getMyProjects = async (
       order: [[sortField, sortDirection]],
     });
 
-    const totalItems = Array.isArray(count) ? count.length : count;
+    const totalItems = count;
     const totalPages = Math.ceil(totalItems / limit);
 
     res.json({
