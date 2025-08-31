@@ -68,10 +68,12 @@ export default function (sequelize: Sequelize) {
         type: DataTypes.ENUM(...Object.values(PaymentStatus)),
         allowNull: false,
         defaultValue: PaymentStatus.PENDING,
+        field: 'payment_status',
       },
       paymentMethod: {
         type: DataTypes.ENUM(...Object.values(PaymentMethod)),
         allowNull: true,
+        field: 'payment_method',
       },
       isAnonymous: {
         type: DataTypes.BOOLEAN,
