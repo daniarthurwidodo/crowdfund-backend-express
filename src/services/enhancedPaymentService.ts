@@ -52,7 +52,7 @@ export class EnhancedPaymentService {
       ...this.defaultRetryOptions,
       ...options,
     };
-    let lastError: Error;
+    let lastError: Error = new Error('Unknown error');
     let currentBackoff = backoffMs;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -160,7 +160,12 @@ export class EnhancedPaymentService {
         let invoice: any;
         if (XENDIT_CONFIG.isProduction) {
           try {
-            invoice = await xendit.Invoice.createInvoice(invoiceRequest);
+            invoice = await xendit.Invoice.createInvoice({
+              data: {
+                ...invoiceRequest,
+                externalId: invoiceRequest.external_id,
+              },
+            });
           } catch (xenditError: any) {
             logger.error('Xendit invoice creation failed', {
               error: xenditError.message,
@@ -262,7 +267,7 @@ export class EnhancedPaymentService {
         let va: any;
         if (XENDIT_CONFIG.isProduction) {
           try {
-            va = await xendit.VirtualAcc.createFixedVA(vaRequest);
+            va = await (xendit as any).VirtualAccount.createFixedVA(vaRequest);
           } catch (xenditError: any) {
             logger.error('Xendit VA creation failed', {
               error: xenditError.message,
@@ -355,29 +360,13 @@ export class EnhancedPaymentService {
         let ewalletResponse: any;
         if (XENDIT_CONFIG.isProduction) {
           try {
-            // Use different methods based on e-wallet type
-            switch (options.ewalletType) {
-              case 'OVO':
-                ewalletResponse =
-                  await xendit.EWallet.createOVOPayment(ewalletRequest);
-                break;
-              case 'DANA':
-                ewalletResponse =
-                  await xendit.EWallet.createDANAPayment(ewalletRequest);
-                break;
-              case 'LINKAJA':
-                ewalletResponse =
-                  await xendit.EWallet.createLinkAjaPayment(ewalletRequest);
-                break;
-              case 'SHOPEEPAY':
-                ewalletResponse =
-                  await xendit.EWallet.createShopeepayPayment(ewalletRequest);
-                break;
-              default:
-                throw new Error(
-                  `Unsupported e-wallet type: ${options.ewalletType}`
-                );
-            }
+            // Use new Xendit SDK structure for e-wallet payments
+            ewalletResponse = await (xendit as any).EWallet.createPayment({
+              data: {
+                ...ewalletRequest,
+                channel_code: options.ewalletType,
+              },
+            });
           } catch (xenditError: any) {
             logger.error('Xendit e-wallet creation failed', {
               error: xenditError.message,
@@ -514,32 +503,39 @@ export class EnhancedPaymentService {
         );
 
         // Update donation and project if payment is successful
-        if (newStatus === PaymentStatus.PAID && payment.donation) {
-          await payment.donation.update(
-            {
-              paymentStatus: PaymentStatus.PAID,
-            },
-            { transaction }
-          );
+        if (newStatus === PaymentStatus.PAID) {
+          const donation = await Donation.findByPk(payment.donationId, {
+            include: [{ model: Project, as: 'project' }],
+            transaction,
+          });
 
-          // Update project funding amount
-          if (payment.donation.project) {
-            const project = payment.donation.project;
-            const newCurrentAmount =
-              Number(project.currentAmount) + Number(payment.amount);
-            await project.update(
+          if (donation) {
+            await donation.update(
               {
-                currentAmount: newCurrentAmount,
+                paymentStatus: PaymentStatus.PAID,
               },
               { transaction }
             );
 
-            logger.info('Project funding updated', {
-              projectId: project.id,
-              previousAmount: project.currentAmount,
-              donationAmount: payment.amount,
-              newAmount: newCurrentAmount,
-            });
+            // Update project funding amount
+            if ((donation as any).project) {
+              const project = (donation as any).project;
+              const newCurrentAmount =
+                Number(project.currentAmount) + Number(payment.amount);
+              await project.update(
+                {
+                  currentAmount: newCurrentAmount,
+                },
+                { transaction }
+              );
+
+              logger.info('Project funding updated', {
+                projectId: project.id,
+                previousAmount: project.currentAmount,
+                donationAmount: payment.amount,
+                newAmount: newCurrentAmount,
+              });
+            }
           }
         }
       });
@@ -616,19 +612,20 @@ export class EnhancedPaymentService {
             // Query Xendit API based on payment method
             switch (payment.method) {
               case PaymentMethod.INVOICE:
-                xenditResponse = await xendit.Invoice.getInvoice({
-                  invoiceID: payment.xenditId,
+                xenditResponse = await xendit.Invoice.getInvoices({
+                  externalId: payment.externalId,
                 });
                 break;
               case PaymentMethod.VIRTUAL_ACCOUNT:
-                xenditResponse = await xendit.VirtualAcc.getFixedVA({
+                xenditResponse = await (
+                  xendit as any
+                ).VirtualAccount.getFixedVA({
                   id: payment.xenditId,
                 });
                 break;
               case PaymentMethod.EWALLET:
-                xenditResponse = await xendit.EWallet.getEWalletPayment({
-                  external_id: payment.externalId,
-                  ewallet_type: payment.ewalletType,
+                xenditResponse = await (xendit as any).EWallet.getPayment({
+                  id: payment.xenditId,
                 });
                 break;
               default:
@@ -716,11 +713,11 @@ export class EnhancedPaymentService {
             switch (payment.method) {
               case PaymentMethod.INVOICE:
                 await xendit.Invoice.expireInvoice({
-                  invoiceID: payment.xenditId,
+                  invoiceId: payment.xenditId,
                 });
                 break;
               case PaymentMethod.VIRTUAL_ACCOUNT:
-                await xendit.VirtualAcc.updateFixedVA({
+                await (xendit as any).VirtualAccount.updateFixedVA({
                   id: payment.xenditId,
                   is_single_use: false,
                   expiration_date: new Date().toISOString(), // Expire immediately

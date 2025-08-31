@@ -5,7 +5,7 @@ import { createChildLogger } from '../config/logger';
 const logger = createChildLogger('JobScheduler');
 
 export class JobScheduler {
-  private tasks: Map<string, cron.ScheduledTask> = new Map();
+  private tasks: Map<string, any> = new Map();
   private isInitialized = false;
 
   /**
@@ -30,7 +30,6 @@ export class JobScheduler {
           }
         },
         {
-          scheduled: false,
           name: 'incremental-reconciliation',
         }
       );
@@ -49,7 +48,6 @@ export class JobScheduler {
           }
         },
         {
-          scheduled: false,
           name: 'full-reconciliation',
         }
       );
@@ -68,7 +66,6 @@ export class JobScheduler {
           }
         },
         {
-          scheduled: false,
           name: 'expired-payments',
         }
       );
@@ -104,7 +101,6 @@ export class JobScheduler {
           }
         },
         {
-          scheduled: false,
           name: 'weekly-report',
         }
       );
@@ -200,9 +196,11 @@ export class JobScheduler {
 
     switch (name) {
       case 'incremental-reconciliation':
-        return paymentReconciliationJob.runIncrementalReconciliation();
+        await paymentReconciliationJob.runIncrementalReconciliation();
+        return;
       case 'full-reconciliation':
-        return paymentReconciliationJob.runFullReconciliation();
+        await paymentReconciliationJob.runFullReconciliation();
+        return;
       case 'expired-payments':
         const result = await paymentReconciliationJob.handleExpiredPayments();
         logger.info('Expired payments handled', result);

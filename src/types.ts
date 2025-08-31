@@ -53,6 +53,7 @@ export enum ProjectStatus {
   ACTIVE = 'ACTIVE',
   CLOSED = 'CLOSED',
   CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
 }
 
 export interface ProjectAttributes {
@@ -149,6 +150,13 @@ export interface PaymentAttributes {
   expiredAt?: Date;
   failureCode?: string;
   webhookData?: Record<string, any>;
+  settlementData?: {
+    settlementId: string;
+    settlementDate: Date;
+    feeAmount: number;
+    netAmount: number;
+    bankAccount?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -178,6 +186,8 @@ export interface XenditInvoiceRequest {
   should_authenticate_credit_card?: boolean;
   currency?: string;
   payment_methods?: string[];
+  success_redirect_url?: string;
+  failure_redirect_url?: string;
 }
 
 export interface XenditVARequest {
@@ -220,6 +230,9 @@ export interface XenditWebhookPayload {
   currency: string;
   payment_channel?: string;
   payment_destination?: string;
+  settlement_id?: string;
+  settlement_date?: string;
+  settlement_bank_account?: string;
 }
 
 // Withdraw Fund Types
@@ -291,6 +304,10 @@ export interface WithdrawInstance extends WithdrawAttributes {
   user?: any;
   project?: any;
   toJSON(): WithdrawAttributes;
+  canBeApproved(): boolean;
+  canBeRejected(): boolean;
+  canBeProcessed(): boolean;
+  canBeCancelled(): boolean;
 }
 
 export interface BankAccount {

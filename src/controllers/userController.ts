@@ -194,7 +194,7 @@ export const deleteAvatar = async (
     await deleteImage(user.avatar);
 
     // Update user record to remove avatar
-    await user.update({ avatar: null });
+    await user.update({ avatar: undefined });
 
     res.json({ message: 'Avatar deleted successfully' });
 
@@ -226,19 +226,25 @@ export const getUserStats = async (
       where: { userId: req.user.id },
       attributes: [
         [
-          Donation.sequelize?.fn('COUNT', Donation.sequelize?.col('id')),
+          (Donation.sequelize as any).fn(
+            'COUNT',
+            (Donation.sequelize as any).col('id')
+          ),
           'totalDonations',
         ],
         [
-          Donation.sequelize?.fn('SUM', Donation.sequelize?.col('amount')),
+          (Donation.sequelize as any).fn(
+            'SUM',
+            (Donation.sequelize as any).col('amount')
+          ),
           'totalDonated',
         ],
         [
-          Donation.sequelize?.fn(
+          (Donation.sequelize as any).fn(
             'COUNT',
-            Donation.sequelize?.fn(
+            (Donation.sequelize as any).fn(
               'DISTINCT',
-              Donation.sequelize?.col('projectId')
+              (Donation.sequelize as any).col('projectId')
             )
           ),
           'projectsSupported',
@@ -250,10 +256,11 @@ export const getUserStats = async (
     if (donationStats.length > 0) {
       stats = {
         totalDonations:
-          parseInt(donationStats[0].totalDonations as string) || 0,
-        totalDonated: parseFloat(donationStats[0].totalDonated as string) || 0,
+          parseInt((donationStats[0] as any).totalDonations as string) || 0,
+        totalDonated:
+          parseFloat((donationStats[0] as any).totalDonated as string) || 0,
         projectsSupported:
-          parseInt(donationStats[0].projectsSupported as string) || 0,
+          parseInt((donationStats[0] as any).projectsSupported as string) || 0,
       };
     }
 
@@ -266,13 +273,16 @@ export const getUserStats = async (
         where: { fundraiserId: req.user.id },
         attributes: [
           [
-            Project.sequelize?.fn('COUNT', Project.sequelize?.col('id')),
+            (Project.sequelize as any).fn(
+              'COUNT',
+              (Project.sequelize as any).col('id')
+            ),
             'totalProjects',
           ],
           [
-            Project.sequelize?.fn(
+            (Project.sequelize as any).fn(
               'SUM',
-              Project.sequelize?.col('currentAmount')
+              (Project.sequelize as any).col('currentAmount')
             ),
             'totalRaised',
           ],
@@ -282,9 +292,9 @@ export const getUserStats = async (
 
       if (projectStats.length > 0) {
         stats.totalProjects =
-          parseInt(projectStats[0].totalProjects as string) || 0;
+          parseInt((projectStats[0] as any).totalProjects as string) || 0;
         stats.totalRaised =
-          parseFloat(projectStats[0].totalRaised as string) || 0;
+          parseFloat((projectStats[0] as any).totalRaised as string) || 0;
       } else {
         stats.totalProjects = 0;
         stats.totalRaised = 0;
@@ -330,15 +340,18 @@ export const getUserById = async (
       },
       attributes: [
         [
-          Donation.sequelize?.fn('COUNT', Donation.sequelize?.col('id')),
+          (Donation.sequelize as any).fn(
+            'COUNT',
+            (Donation.sequelize as any).col('id')
+          ),
           'totalDonations',
         ],
         [
-          Donation.sequelize?.fn(
+          (Donation.sequelize as any).fn(
             'COUNT',
-            Donation.sequelize?.fn(
+            (Donation.sequelize as any).fn(
               'DISTINCT',
-              Donation.sequelize?.col('projectId')
+              (Donation.sequelize as any).col('projectId')
             )
           ),
           'projectsSupported',
@@ -350,9 +363,9 @@ export const getUserById = async (
     if (donationStats.length > 0) {
       publicStats = {
         totalDonations:
-          parseInt(donationStats[0].totalDonations as string) || 0,
+          parseInt((donationStats[0] as any).totalDonations as string) || 0,
         projectsSupported:
-          parseInt(donationStats[0].projectsSupported as string) || 0,
+          parseInt((donationStats[0] as any).projectsSupported as string) || 0,
       };
     }
 

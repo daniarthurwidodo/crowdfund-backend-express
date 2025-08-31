@@ -93,7 +93,10 @@ export class WithdrawService {
         };
       }
 
-      const totalRaised = Number(project.dataValues.totalRaised) || 0;
+      const totalRaised =
+        Number(
+          (project as any).dataValues?.totalRaised || project.currentAmount
+        ) || 0;
 
       // Get pending withdrawals
       const pendingWithdrawals =
@@ -397,8 +400,9 @@ export class WithdrawService {
 
         if (XENDIT_CONFIG.isProduction) {
           // Real Xendit API call
-          disbursementResponse =
-            await xendit.Disbursement.create(disbursementRequest);
+          disbursementResponse = await (xendit as any).Disbursement.create({
+            data: disbursementRequest,
+          });
         } else {
           // Mock response for development
           disbursementResponse = {
