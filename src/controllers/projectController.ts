@@ -15,19 +15,27 @@ const cleanupProjectImages = async (images: string[]): Promise<void> => {
       await deleteImage(imagePath);
       logger.info(`Cleaned up project image: ${imagePath}`);
     } catch (error) {
-      logger.error({ err: error, imagePath }, 'Failed to cleanup project image');
+      logger.error(
+        { err: error, imagePath },
+        'Failed to cleanup project image'
+      );
     }
   }
 };
 
 // Helper function to check project ownership or admin
-const checkProjectAuthorization = (project: any, userId: string, userRole: string): boolean => {
+const checkProjectAuthorization = (
+  project: any,
+  userId: string,
+  userRole: string
+): boolean => {
   return userRole === UserRole.ADMIN || project.fundraiserId === userId;
 };
 
 // Helper function to validate image URLs
 const validateImageUrls = (images: string[]): boolean => {
-  const urlRegex = /^\/uploads\/(projects|avatars)\/[^/]+\.(webp|jpg|jpeg|png)$/i;
+  const urlRegex =
+    /^\/uploads\/(projects|avatars)\/[^/]+\.(webp|jpg|jpeg|png)$/i;
   return images.every(url => urlRegex.test(url));
 };
 
@@ -37,7 +45,7 @@ const projectSchema = Joi.object({
   images: Joi.array().items(Joi.string().uri()).max(10).optional(),
   targetAmount: Joi.number().integer().min(1000).max(10000000000).required(), // Min 1,000 IDR, Max 10B IDR
   startDate: Joi.date().required(),
-  endDate: Joi.date().greater(Joi.ref('startDate')).required()
+  endDate: Joi.date().greater(Joi.ref('startDate')).required(),
 });
 
 const updateProjectSchema = Joi.object({
@@ -46,10 +54,15 @@ const updateProjectSchema = Joi.object({
   images: Joi.array().items(Joi.string().uri()).max(10).optional(),
   targetAmount: Joi.number().integer().min(1000).max(10000000000).optional(), // Min 1,000 IDR, Max 10B IDR
   endDate: Joi.date().optional(),
-  status: Joi.string().valid(...Object.values(ProjectStatus)).optional()
+  status: Joi.string()
+    .valid(...Object.values(ProjectStatus))
+    .optional(),
 });
 
-export const createProject = async (req: Request, res: Response): Promise<void> => {
+export const createProject = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = projectSchema.validate(req.body);
     if (error) {
@@ -57,41 +70,60 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (req.user?.role !== UserRole.FUNDRAISER && req.user?.role !== UserRole.ADMIN) {
+    if (
+      req.user?.role !== UserRole.FUNDRAISER &&
+      req.user?.role !== UserRole.ADMIN
+    ) {
       res.status(403).json({ message: 'Only fundraisers can create projects' });
       return;
     }
 
     const project = await Project.create({
       ...value,
-      fundraiserId: req.user.id
+      fundraiserId: req.user.id,
     });
 
     const createdProject = await Project.findByPk(project.id, {
-      include: [{
-        model: User,
-        as: 'fundraiser',
-        attributes: ['id', 'username', 'firstName', 'lastName']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'fundraiser',
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
+      ],
     });
 
     res.status(201).json({
       message: 'Project created successfully',
-      project: createdProject
+      project: createdProject,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error creating project');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error creating project'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const getProjects = async (req: Request, res: Response): Promise<void> => {
+export const getProjects = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = (page - 1) * limit;
 
-    const { search, status, fundraiser, minAmount, maxAmount, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const {
+      search,
+      status,
+      fundraiser,
+      minAmount,
+      maxAmount,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+    } = req.query;
 
     const whereClause: any = {};
     const having: any = {};
@@ -99,7 +131,7 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
     if (search) {
       whereClause[Op.or] = [
         { title: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } }
+        { description: { [Op.iLike]: `%${search}%` } },
       ];
     }
 
@@ -116,11 +148,22 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
     }
 
     if (maxAmount) {
-      whereClause.targetAmount = { ...whereClause.targetAmount, [Op.lte]: maxAmount };
+      whereClause.targetAmount = {
+        ...whereClause.targetAmount,
+        [Op.lte]: maxAmount,
+      };
     }
 
-    const validSortFields = ['createdAt', 'title', 'targetAmount', 'currentAmount', 'endDate'];
-    const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+    const validSortFields = [
+      'createdAt',
+      'title',
+      'targetAmount',
+      'currentAmount',
+      'endDate',
+    ];
+    const sortField = validSortFields.includes(sortBy as string)
+      ? (sortBy as string)
+      : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const { count, rows: projects } = await Project.findAndCountAll({
@@ -129,18 +172,24 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
         {
           model: User,
           as: 'fundraiser',
-          attributes: ['id', 'username', 'firstName', 'lastName']
+          attributes: ['id', 'username', 'firstName', 'lastName'],
         },
         {
           model: Donation,
           as: 'donations',
-          attributes: []
-        }
+          attributes: [],
+        },
       ],
       attributes: {
         include: [
-          [(Project as any).sequelize.fn('COUNT', (Project as any).sequelize.col('donations.id')), 'donationCount']
-        ]
+          [
+            (Project as any).sequelize.fn(
+              'COUNT',
+              (Project as any).sequelize.col('donations.id')
+            ),
+            'donationCount',
+          ],
+        ],
       },
       group: ['Project.id', 'fundraiser.id'],
       having,
@@ -148,7 +197,7 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
       offset,
       order: [[sortField, sortDirection]],
       distinct: true,
-      subQuery: false
+      subQuery: false,
     });
 
     const totalItems = Array.isArray(count) ? count.length : count;
@@ -161,8 +210,8 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
         totalPages,
         totalItems,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
     logger.error({ err: error, query: req.query }, 'Error fetching projects');
@@ -170,7 +219,10 @@ export const getProjects = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const getProjectById = async (req: Request, res: Response): Promise<void> => {
+export const getProjectById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -179,19 +231,21 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
         {
           model: User,
           as: 'fundraiser',
-          attributes: ['id', 'username', 'firstName', 'lastName']
+          attributes: ['id', 'username', 'firstName', 'lastName'],
         },
         {
           model: Donation,
           as: 'donations',
-          include: [{
-            model: User,
-            as: 'user',
-            attributes: ['id', 'username', 'firstName', 'lastName']
-          }],
-          order: [['createdAt', 'DESC']]
-        }
-      ]
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'username', 'firstName', 'lastName'],
+            },
+          ],
+          order: [['createdAt', 'DESC']],
+        },
+      ],
     });
 
     if (!project) {
@@ -201,12 +255,18 @@ export const getProjectById = async (req: Request, res: Response): Promise<void>
 
     res.json({ project });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.id }, 'Error fetching project');
+    logger.error(
+      { err: error, projectId: req.params.id },
+      'Error fetching project'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const updateProject = async (req: Request, res: Response): Promise<void> => {
+export const updateProject = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { error, value } = updateProjectSchema.validate(req.body);
@@ -223,13 +283,21 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     }
 
     // Enhanced authorization check
-    if (!req.user || !checkProjectAuthorization(project, req.user.id, req.user.role)) {
-      res.status(403).json({ message: 'Not authorized to update this project' });
+    if (
+      !req.user ||
+      !checkProjectAuthorization(project, req.user.id, req.user.role)
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Not authorized to update this project' });
       return;
     }
 
     // Prevent updates to closed projects (except by admins)
-    if (project.status === ProjectStatus.CLOSED && req.user?.role !== UserRole.ADMIN) {
+    if (
+      project.status === ProjectStatus.CLOSED &&
+      req.user?.role !== UserRole.ADMIN
+    ) {
       res.status(400).json({ message: 'Cannot update closed project' });
       return;
     }
@@ -242,8 +310,9 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     // Validate image URLs if provided
     if (value.images && value.images.length > 0) {
       if (!validateImageUrls(value.images)) {
-        res.status(400).json({ 
-          message: 'Invalid image URLs. Images must be uploaded through the proper upload endpoint.' 
+        res.status(400).json({
+          message:
+            'Invalid image URLs. Images must be uploaded through the proper upload endpoint.',
         });
         return;
       }
@@ -253,38 +322,51 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (value.images && project.images) {
       const oldImages = project.images || [];
       const newImages = value.images || [];
-      const imagesToDelete = oldImages.filter((img: string) => !newImages.includes(img));
-      
+      const imagesToDelete = oldImages.filter(
+        (img: string) => !newImages.includes(img)
+      );
+
       if (imagesToDelete.length > 0) {
         // Clean up old images asynchronously to not block the response
         cleanupProjectImages(imagesToDelete).catch(error => {
-          logger.error({ err: error, projectId: id }, 'Failed to cleanup old project images');
+          logger.error(
+            { err: error, projectId: id },
+            'Failed to cleanup old project images'
+          );
         });
       }
     }
 
     await project.update(value);
     await project.reload({
-      include: [{
-        model: User,
-        as: 'fundraiser',
-        attributes: ['id', 'username', 'firstName', 'lastName']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'fundraiser',
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
+      ],
     });
 
     logger.info(`Project ${id} updated by user ${req.user?.id}`);
 
     res.json({
       message: 'Project updated successfully',
-      project
+      project,
     });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error updating project');
+    logger.error(
+      { err: error, projectId: req.params.id, userId: req.user?.id },
+      'Error updating project'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const deleteProject = async (req: Request, res: Response): Promise<void> => {
+export const deleteProject = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -295,14 +377,21 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
     }
 
     // Enhanced authorization check
-    if (!req.user || !checkProjectAuthorization(project, req.user.id, req.user.role)) {
-      res.status(403).json({ message: 'Not authorized to delete this project' });
+    if (
+      !req.user ||
+      !checkProjectAuthorization(project, req.user.id, req.user.role)
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Not authorized to delete this project' });
       return;
     }
 
     // Only allow deletion of projects with no donations (or allow admins to force delete)
     if (project.currentAmount > 0 && req.user?.role !== UserRole.ADMIN) {
-      res.status(400).json({ message: 'Cannot delete project with donations. Contact administrator.' });
+      res.status(400).json({
+        message: 'Cannot delete project with donations. Contact administrator.',
+      });
       return;
     }
 
@@ -314,19 +403,28 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
     // Clean up project images after successful deletion
     if (imagesToCleanup.length > 0) {
       cleanupProjectImages(imagesToCleanup).catch(error => {
-        logger.error({ err: error, projectId: id }, 'Failed to cleanup project images after deletion');
+        logger.error(
+          { err: error, projectId: id },
+          'Failed to cleanup project images after deletion'
+        );
       });
     }
 
     logger.info(`Project ${id} deleted by user ${req.user?.id}`);
     res.json({ message: 'Project deleted successfully' });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error deleting project');
+    logger.error(
+      { err: error, projectId: req.params.id, userId: req.user?.id },
+      'Error deleting project'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const removeProjectImage = async (req: Request, res: Response): Promise<void> => {
+export const removeProjectImage = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { imageUrl } = req.body;
@@ -343,8 +441,13 @@ export const removeProjectImage = async (req: Request, res: Response): Promise<v
     }
 
     // Enhanced authorization check
-    if (!req.user || !checkProjectAuthorization(project, req.user.id, req.user.role)) {
-      res.status(403).json({ message: 'Not authorized to modify this project' });
+    if (
+      !req.user ||
+      !checkProjectAuthorization(project, req.user.id, req.user.role)
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Not authorized to modify this project' });
       return;
     }
 
@@ -355,7 +458,9 @@ export const removeProjectImage = async (req: Request, res: Response): Promise<v
     }
 
     // Remove image from project
-    const updatedImages = currentImages.filter((img: string) => img !== imageUrl);
+    const updatedImages = currentImages.filter(
+      (img: string) => img !== imageUrl
+    );
     await project.update({ images: updatedImages });
 
     // Clean up the image file
@@ -367,24 +472,32 @@ export const removeProjectImage = async (req: Request, res: Response): Promise<v
     }
 
     await project.reload({
-      include: [{
-        model: User,
-        as: 'fundraiser',
-        attributes: ['id', 'username', 'firstName', 'lastName']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'fundraiser',
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
+      ],
     });
 
     res.json({
       message: 'Image removed successfully',
-      project
+      project,
     });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.id, userId: req.user?.id }, 'Error removing project image');
+    logger.error(
+      { err: error, projectId: req.params.id, userId: req.user?.id },
+      'Error removing project image'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const getMyProjects = async (req: Request, res: Response): Promise<void> => {
+export const getMyProjects = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
@@ -397,27 +510,49 @@ export const getMyProjects = async (req: Request, res: Response): Promise<void> 
       whereClause.status = status;
     }
 
-    const validSortFields = ['createdAt', 'title', 'targetAmount', 'currentAmount', 'endDate'];
-    const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+    const validSortFields = [
+      'createdAt',
+      'title',
+      'targetAmount',
+      'currentAmount',
+      'endDate',
+    ];
+    const sortField = validSortFields.includes(sortBy as string)
+      ? (sortBy as string)
+      : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const { count, rows: projects } = await Project.findAndCountAll({
       where: whereClause,
-      include: [{
-        model: Donation,
-        as: 'donations',
-        attributes: []
-      }],
+      include: [
+        {
+          model: Donation,
+          as: 'donations',
+          attributes: [],
+        },
+      ],
       attributes: {
         include: [
-          [(Project as any).sequelize.fn('COUNT', (Project as any).sequelize.col('donations.id')), 'donationCount'],
-          [(Project as any).sequelize.fn('SUM', (Project as any).sequelize.col('donations.amount')), 'totalRaised']
-        ]
+          [
+            (Project as any).sequelize.fn(
+              'COUNT',
+              (Project as any).sequelize.col('donations.id')
+            ),
+            'donationCount',
+          ],
+          [
+            (Project as any).sequelize.fn(
+              'SUM',
+              (Project as any).sequelize.col('donations.amount')
+            ),
+            'totalRaised',
+          ],
+        ],
       },
       group: ['Project.id'],
       limit,
       offset,
-      order: [[sortField, sortDirection]]
+      order: [[sortField, sortDirection]],
     });
 
     const totalItems = Array.isArray(count) ? count.length : count;
@@ -430,11 +565,14 @@ export const getMyProjects = async (req: Request, res: Response): Promise<void> 
         totalPages,
         totalItems,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error fetching user projects');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error fetching user projects'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };

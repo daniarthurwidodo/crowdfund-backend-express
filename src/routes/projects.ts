@@ -8,7 +8,7 @@ import {
   updateProject,
   deleteProject,
   getMyProjects,
-  removeProjectImage
+  removeProjectImage,
 } from '../controllers/projectController';
 
 const router = Router();

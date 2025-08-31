@@ -1,13 +1,18 @@
-import { xendit, XENDIT_CONFIG, SUPPORTED_VA_BANKS, SUPPORTED_EWALLETS } from '../config/xendit';
+import {
+  xendit,
+  XENDIT_CONFIG,
+  SUPPORTED_VA_BANKS,
+  SUPPORTED_EWALLETS,
+} from '../config/xendit';
 import { Payment, Donation } from '../models';
-import { 
-  PaymentMethod, 
-  PaymentStatus, 
-  PaymentInstance, 
-  XenditInvoiceRequest, 
-  XenditVARequest, 
+import {
+  PaymentMethod,
+  PaymentStatus,
+  PaymentInstance,
+  XenditInvoiceRequest,
+  XenditVARequest,
   XenditEwalletRequest,
-  XenditWebhookPayload
+  XenditWebhookPayload,
 } from '../types';
 import { generateULID } from '../utils/ulid';
 import { createChildLogger } from '../config/logger';
@@ -15,15 +20,17 @@ import { createChildLogger } from '../config/logger';
 const logger = createChildLogger('PaymentService');
 
 export class PaymentService {
-  
   /**
    * Create an invoice payment
    */
-  async createInvoice(donationId: string, options: {
-    payerEmail?: string;
-    description: string;
-    paymentMethods?: string[];
-  }): Promise<PaymentInstance> {
+  async createInvoice(
+    donationId: string,
+    options: {
+      payerEmail?: string;
+      description: string;
+      paymentMethods?: string[];
+    }
+  ): Promise<PaymentInstance> {
     try {
       const donation = await Donation.findByPk(donationId);
       if (!donation) {
@@ -31,7 +38,7 @@ export class PaymentService {
       }
 
       const externalId = `donation-${donationId}-${generateULID()}`;
-      
+
       const invoiceRequest: XenditInvoiceRequest = {
         external_id: externalId,
         amount: Number(donation.amount),
@@ -41,19 +48,29 @@ export class PaymentService {
         should_send_email: !!options.payerEmail,
         should_authenticate_credit_card: false,
         currency: XENDIT_CONFIG.defaultCurrency,
-        payment_methods: options.paymentMethods || ['BANK_TRANSFER', 'CREDIT_CARD', 'EWALLET', 'RETAIL_OUTLET']
+        payment_methods: options.paymentMethods || [
+          'BANK_TRANSFER',
+          'CREDIT_CARD',
+          'EWALLET',
+          'RETAIL_OUTLET',
+        ],
       };
 
-      logger.info('Creating Xendit invoice', { externalId, amount: donation.amount });
+      logger.info('Creating Xendit invoice', {
+        externalId,
+        amount: donation.amount,
+      });
       // Note: Using mock response for now - update with correct Xendit SDK method
       const invoice = {
         id: `inv_${Date.now()}`,
-        invoiceUrl: `https://checkout.xendit.co/web/${Date.now()}`
+        invoiceUrl: `https://checkout.xendit.co/web/${Date.now()}`,
       };
 
       // Calculate expiry date
       const expiredAt = new Date();
-      expiredAt.setSeconds(expiredAt.getSeconds() + XENDIT_CONFIG.defaultInvoiceDuration);
+      expiredAt.setSeconds(
+        expiredAt.getSeconds() + XENDIT_CONFIG.defaultInvoiceDuration
+      );
 
       // Create payment record
       const payment = await Payment.create({
@@ -65,18 +82,21 @@ export class PaymentService {
         method: PaymentMethod.INVOICE,
         status: PaymentStatus.PENDING,
         paymentUrl: invoice.invoiceUrl,
-        expiredAt
+        expiredAt,
       });
 
-      logger.info('Invoice payment created successfully', { 
-        paymentId: payment.id, 
+      logger.info('Invoice payment created successfully', {
+        paymentId: payment.id,
         xenditId: invoice.id,
-        invoiceUrl: invoice.invoiceUrl 
+        invoiceUrl: invoice.invoiceUrl,
       });
 
       return payment;
     } catch (error) {
-      logger.error({ err: error, donationId }, 'Error creating invoice payment');
+      logger.error(
+        { err: error, donationId },
+        'Error creating invoice payment'
+      );
       throw error;
     }
   }
@@ -84,10 +104,13 @@ export class PaymentService {
   /**
    * Create a virtual account payment
    */
-  async createVirtualAccount(donationId: string, options: {
-    bankCode: keyof typeof SUPPORTED_VA_BANKS;
-    customerName: string;
-  }): Promise<PaymentInstance> {
+  async createVirtualAccount(
+    donationId: string,
+    options: {
+      bankCode: keyof typeof SUPPORTED_VA_BANKS;
+      customerName: string;
+    }
+  ): Promise<PaymentInstance> {
     try {
       const donation = await Donation.findByPk(donationId);
       if (!donation) {
@@ -99,11 +122,13 @@ export class PaymentService {
       }
 
       const externalId = `donation-va-${donationId}-${generateULID()}`;
-      
+
       // Calculate expiry date
       const expiredAt = new Date();
-      expiredAt.setHours(expiredAt.getHours() + XENDIT_CONFIG.defaultExpiryHours);
-      
+      expiredAt.setHours(
+        expiredAt.getHours() + XENDIT_CONFIG.defaultExpiryHours
+      );
+
       const vaRequest: XenditVARequest = {
         external_id: externalId,
         bank_code: options.bankCode,
@@ -111,19 +136,21 @@ export class PaymentService {
         expected_amount: Number(donation.amount),
         is_closed: true,
         expiration_date: expiredAt.toISOString(),
-        is_single_use: true
+        is_single_use: true,
       };
 
-      logger.info('Creating Xendit virtual account', { 
-        externalId, 
+      logger.info('Creating Xendit virtual account', {
+        externalId,
         bankCode: options.bankCode,
-        amount: donation.amount 
+        amount: donation.amount,
       });
 
       // Note: Using mock response for now - update with correct Xendit SDK method
       const va = {
         id: `va_${Date.now()}`,
-        account_number: `8808${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`
+        account_number: `8808${Math.floor(Math.random() * 1000000)
+          .toString()
+          .padStart(6, '0')}`,
       };
 
       // Create payment record
@@ -137,20 +164,23 @@ export class PaymentService {
         status: PaymentStatus.PENDING,
         virtualAccount: {
           bankCode: options.bankCode,
-          accountNumber: va.account_number
+          accountNumber: va.account_number,
         },
-        expiredAt
+        expiredAt,
       });
 
-      logger.info('Virtual account payment created successfully', { 
-        paymentId: payment.id, 
+      logger.info('Virtual account payment created successfully', {
+        paymentId: payment.id,
         xenditId: va.id,
-        accountNumber: va.account_number 
+        accountNumber: va.account_number,
       });
 
       return payment;
     } catch (error) {
-      logger.error({ err: error, donationId, bankCode: options.bankCode }, 'Error creating virtual account payment');
+      logger.error(
+        { err: error, donationId, bankCode: options.bankCode },
+        'Error creating virtual account payment'
+      );
       throw error;
     }
   }
@@ -158,11 +188,14 @@ export class PaymentService {
   /**
    * Create an e-wallet payment
    */
-  async createEwallet(donationId: string, options: {
-    ewalletType: keyof typeof SUPPORTED_EWALLETS;
-    phone?: string;
-    redirectUrl?: string;
-  }): Promise<PaymentInstance> {
+  async createEwallet(
+    donationId: string,
+    options: {
+      ewalletType: keyof typeof SUPPORTED_EWALLETS;
+      phone?: string;
+      redirectUrl?: string;
+    }
+  ): Promise<PaymentInstance> {
     try {
       const donation = await Donation.findByPk(donationId);
       if (!donation) {
@@ -174,31 +207,31 @@ export class PaymentService {
       }
 
       const externalId = `donation-ewallet-${donationId}-${generateULID()}`;
-      
+
       const ewalletRequest: XenditEwalletRequest = {
         external_id: externalId,
         amount: Number(donation.amount),
         phone: options.phone,
         ewallet_type: options.ewalletType,
         callback_url: XENDIT_CONFIG.callbackUrl,
-        redirect_url: options.redirectUrl
+        redirect_url: options.redirectUrl,
       };
 
-      logger.info('Creating Xendit e-wallet payment', { 
-        externalId, 
+      logger.info('Creating Xendit e-wallet payment', {
+        externalId,
         ewalletType: options.ewalletType,
-        amount: donation.amount 
+        amount: donation.amount,
       });
 
       let ewalletResponse: any;
-      
+
       // Note: Using mock response for now - update with correct Xendit SDK method
       ewalletResponse = {
         id: `ewallet_${Date.now()}`,
         checkout_url: `https://checkout.xendit.co/web/${Date.now()}`,
         actions: {
-          desktop_web_checkout_url: `https://checkout.xendit.co/web/${Date.now()}`
-        }
+          desktop_web_checkout_url: `https://checkout.xendit.co/web/${Date.now()}`,
+        },
       };
 
       // Calculate expiry date (typically shorter for e-wallets)
@@ -214,21 +247,26 @@ export class PaymentService {
         currency: XENDIT_CONFIG.defaultCurrency,
         method: PaymentMethod.EWALLET,
         status: PaymentStatus.PENDING,
-        paymentUrl: ewalletResponse.checkout_url || ewalletResponse.actions?.desktop_web_checkout_url,
+        paymentUrl:
+          ewalletResponse.checkout_url ||
+          ewalletResponse.actions?.desktop_web_checkout_url,
         ewalletType: options.ewalletType,
-        expiredAt
+        expiredAt,
       });
 
-      logger.info('E-wallet payment created successfully', { 
-        paymentId: payment.id, 
+      logger.info('E-wallet payment created successfully', {
+        paymentId: payment.id,
         xenditId: ewalletResponse.id,
         ewalletType: options.ewalletType,
-        checkoutUrl: payment.paymentUrl
+        checkoutUrl: payment.paymentUrl,
       });
 
       return payment;
     } catch (error) {
-      logger.error({ err: error, donationId, ewalletType: options.ewalletType }, 'Error creating e-wallet payment');
+      logger.error(
+        { err: error, donationId, ewalletType: options.ewalletType },
+        'Error creating e-wallet payment'
+      );
       throw error;
     }
   }
@@ -238,19 +276,21 @@ export class PaymentService {
    */
   async processWebhook(payload: XenditWebhookPayload): Promise<void> {
     try {
-      logger.info('Processing Xendit webhook', { 
-        externalId: payload.external_id, 
+      logger.info('Processing Xendit webhook', {
+        externalId: payload.external_id,
         status: payload.status,
-        paymentMethod: payload.payment_method 
+        paymentMethod: payload.payment_method,
       });
 
       // Find payment by external ID
       const payment = await Payment.findOne({
-        where: { externalId: payload.external_id }
+        where: { externalId: payload.external_id },
       });
 
       if (!payment) {
-        logger.warn('Payment not found for webhook', { externalId: payload.external_id });
+        logger.warn('Payment not found for webhook', {
+          externalId: payload.external_id,
+        });
         return;
       }
 
@@ -277,7 +317,7 @@ export class PaymentService {
       await payment.update({
         status: newStatus,
         paidAt,
-        webhookData: payload
+        webhookData: payload,
       });
 
       // Update donation status
@@ -286,13 +326,12 @@ export class PaymentService {
         await donation.update({ paymentStatus: PaymentStatus.PAID });
       }
 
-      logger.info('Webhook processed successfully', { 
+      logger.info('Webhook processed successfully', {
         paymentId: payment.id,
         oldStatus: payment.status,
         newStatus,
-        donationId: payment.donationId
+        donationId: payment.donationId,
       });
-
     } catch (error) {
       logger.error({ err: error, payload }, 'Error processing webhook');
       throw error;
@@ -310,8 +349,8 @@ export class PaymentService {
       }
 
       // Note: Mock implementation - update with correct Xendit SDK methods
-      let xenditResponse: any = { status: payment.status };
-      
+      const xenditResponse: any = { status: payment.status };
+
       // In a real implementation, you would query Xendit API here
       logger.info('Mock status check', { paymentId, method: payment.method });
 
@@ -334,10 +373,10 @@ export class PaymentService {
 
       if (payment.status !== newStatus) {
         await payment.update({ status: newStatus });
-        logger.info('Payment status updated from Xendit', { 
-          paymentId, 
+        logger.info('Payment status updated from Xendit', {
+          paymentId,
           oldStatus: payment.status,
-          newStatus 
+          newStatus,
         });
       }
 

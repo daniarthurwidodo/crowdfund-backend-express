@@ -38,26 +38,28 @@ export class PaymentReconciliationJob {
       const pendingPayments = await Payment.findAll({
         where: {
           status: {
-            [Op.in]: [PaymentStatus.PENDING, PaymentStatus.FAILED]
+            [Op.in]: [PaymentStatus.PENDING, PaymentStatus.FAILED],
           },
           createdAt: {
             // Only check payments from last 30 days to avoid unnecessary API calls
-            [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-          }
+            [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
         },
         attributes: ['id', 'status', 'externalId', 'xenditId', 'createdAt'],
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
       });
 
       logger.info(`Found ${pendingPayments.length} payments to reconcile`);
 
-      const result = await this.reconcilePayments(pendingPayments.map(p => p.id));
-      
+      const result = await this.reconcilePayments(
+        pendingPayments.map(p => p.id)
+      );
+
       this.lastRunTime = new Date();
-      logger.info('Full reconciliation completed', { 
+      logger.info('Full reconciliation completed', {
         totalChecked: result.totalChecked,
         totalUpdated: result.totalUpdated,
-        executionTime: result.executionTime
+        executionTime: result.executionTime,
       });
 
       return result;
@@ -69,7 +71,9 @@ export class PaymentReconciliationJob {
   /**
    * Run incremental reconciliation for recent payments
    */
-  async runIncrementalReconciliation(hoursBack: number = 4): Promise<ReconciliationResult> {
+  async runIncrementalReconciliation(
+    hoursBack: number = 4
+  ): Promise<ReconciliationResult> {
     if (this.isRunning) {
       throw new Error('Reconciliation job is already running');
     }
@@ -78,10 +82,12 @@ export class PaymentReconciliationJob {
     this.isRunning = true;
 
     try {
-      logger.info(`Starting incremental reconciliation for last ${hoursBack} hours`);
+      logger.info(
+        `Starting incremental reconciliation for last ${hoursBack} hours`
+      );
 
       const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-      
+
       // Get payments that might have status changes
       const recentPayments = await Payment.findAll({
         where: {
@@ -89,39 +95,43 @@ export class PaymentReconciliationJob {
             // Pending payments created recently
             {
               status: PaymentStatus.PENDING,
-              createdAt: { [Op.gte]: cutoffTime }
+              createdAt: { [Op.gte]: cutoffTime },
             },
             // Payments updated recently but still not final status
             {
               status: {
-                [Op.in]: [PaymentStatus.PENDING, PaymentStatus.FAILED]
+                [Op.in]: [PaymentStatus.PENDING, PaymentStatus.FAILED],
               },
-              updatedAt: { [Op.gte]: cutoffTime }
+              updatedAt: { [Op.gte]: cutoffTime },
             },
             // Payments that might have expired
             {
               status: PaymentStatus.PENDING,
-              expiredAt: { 
+              expiredAt: {
                 [Op.lte]: new Date(),
-                [Op.gte]: cutoffTime
-              }
-            }
-          ]
+                [Op.gte]: cutoffTime,
+              },
+            },
+          ],
         },
         attributes: ['id', 'status', 'externalId', 'xenditId', 'expiredAt'],
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
       });
 
-      logger.info(`Found ${recentPayments.length} recent payments to reconcile`);
+      logger.info(
+        `Found ${recentPayments.length} recent payments to reconcile`
+      );
 
-      const result = await this.reconcilePayments(recentPayments.map(p => p.id));
-      
+      const result = await this.reconcilePayments(
+        recentPayments.map(p => p.id)
+      );
+
       this.lastRunTime = new Date();
-      logger.info('Incremental reconciliation completed', { 
+      logger.info('Incremental reconciliation completed', {
         hoursBack,
         totalChecked: result.totalChecked,
         totalUpdated: result.totalUpdated,
-        executionTime: result.executionTime
+        executionTime: result.executionTime,
       });
 
       return result;
@@ -142,7 +152,7 @@ export class PaymentReconciliationJob {
     // Get current statuses before update
     const paymentsBefore = await Payment.findAll({
       where: { id: { [Op.in]: paymentIds } },
-      attributes: ['id', 'status']
+      attributes: ['id', 'status'],
     });
 
     const statusesBefore = new Map(paymentsBefore.map(p => [p.id, p.status]));
@@ -154,7 +164,7 @@ export class PaymentReconciliationJob {
     // Get statuses after update to count changes
     const paymentsAfter = await Payment.findAll({
       where: { id: { [Op.in]: paymentIds } },
-      attributes: ['id', 'status']
+      attributes: ['id', 'status'],
     });
 
     // Count status changes
@@ -165,11 +175,11 @@ export class PaymentReconciliationJob {
       if (oldStatus && oldStatus !== newStatus) {
         totalUpdated++;
         statusUpdates[newStatus] = (statusUpdates[newStatus] || 0) + 1;
-        
+
         logger.info('Payment status reconciled', {
           paymentId: payment.id,
           oldStatus,
-          newStatus
+          newStatus,
         });
       }
     }
@@ -181,14 +191,17 @@ export class PaymentReconciliationJob {
       totalUpdated,
       statusUpdates,
       errors,
-      executionTime
+      executionTime,
     };
   }
 
   /**
    * Handle expired payments
    */
-  async handleExpiredPayments(): Promise<{ expiredCount: number; errors: string[] }> {
+  async handleExpiredPayments(): Promise<{
+    expiredCount: number;
+    errors: string[];
+  }> {
     logger.info('Checking for expired payments');
 
     const errors: string[] = [];
@@ -199,9 +212,9 @@ export class PaymentReconciliationJob {
       const expiredPayments = await Payment.findAll({
         where: {
           status: PaymentStatus.PENDING,
-          expiredAt: { [Op.lte]: new Date() }
+          expiredAt: { [Op.lte]: new Date() },
         },
-        attributes: ['id', 'externalId', 'expiredAt']
+        attributes: ['id', 'externalId', 'expiredAt'],
       });
 
       logger.info(`Found ${expiredPayments.length} expired payments`);
@@ -210,11 +223,11 @@ export class PaymentReconciliationJob {
         try {
           await payment.update({ status: PaymentStatus.EXPIRED });
           expiredCount++;
-          
+
           logger.info('Payment marked as expired', {
             paymentId: payment.id,
             externalId: payment.externalId,
-            expiredAt: payment.expiredAt
+            expiredAt: payment.expiredAt,
           });
         } catch (error: any) {
           const errorMsg = `Failed to expire payment ${payment.id}: ${error.message}`;
@@ -222,7 +235,6 @@ export class PaymentReconciliationJob {
           logger.error(errorMsg);
         }
       }
-
     } catch (error: any) {
       const errorMsg = `Failed to query expired payments: ${error.message}`;
       errors.push(errorMsg);
@@ -242,9 +254,21 @@ export class PaymentReconciliationJob {
       byMethod: { [key: string]: number };
     };
     issues: {
-      longPendingPayments: Array<{ id: string; externalId: string; daysPending: number }>;
-      failedPayments: Array<{ id: string; externalId: string; failureCode?: string }>;
-      expiredPayments: Array<{ id: string; externalId: string; expiredAt: Date }>;
+      longPendingPayments: Array<{
+        id: string;
+        externalId: string;
+        daysPending: number;
+      }>;
+      failedPayments: Array<{
+        id: string;
+        externalId: string;
+        failureCode?: string;
+      }>;
+      expiredPayments: Array<{
+        id: string;
+        externalId: string;
+        expiredAt: Date;
+      }>;
     };
   }> {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -252,24 +276,34 @@ export class PaymentReconciliationJob {
     // Get payment summary
     const payments = await Payment.findAll({
       where: {
-        createdAt: { [Op.gte]: cutoffDate }
+        createdAt: { [Op.gte]: cutoffDate },
       },
-      attributes: ['id', 'status', 'method', 'externalId', 'createdAt', 'expiredAt', 'failureCode']
+      attributes: [
+        'id',
+        'status',
+        'method',
+        'externalId',
+        'createdAt',
+        'expiredAt',
+        'failureCode',
+      ],
     });
 
     // Calculate summary statistics
     const summary = {
       totalPayments: payments.length,
       byStatus: {} as { [key in PaymentStatus]?: number },
-      byMethod: {} as { [key: string]: number }
+      byMethod: {} as { [key: string]: number },
     };
 
     for (const payment of payments) {
       // Count by status
-      summary.byStatus[payment.status] = (summary.byStatus[payment.status] || 0) + 1;
-      
+      summary.byStatus[payment.status] =
+        (summary.byStatus[payment.status] || 0) + 1;
+
       // Count by method
-      summary.byMethod[payment.method] = (summary.byMethod[payment.method] || 0) + 1;
+      summary.byMethod[payment.method] =
+        (summary.byMethod[payment.method] || 0) + 1;
     }
 
     // Identify issues
@@ -282,7 +316,9 @@ export class PaymentReconciliationJob {
         .map(p => ({
           id: p.id,
           externalId: p.externalId,
-          daysPending: Math.floor((now.getTime() - p.createdAt.getTime()) / oneDayMs)
+          daysPending: Math.floor(
+            (now.getTime() - p.createdAt.getTime()) / oneDayMs
+          ),
         }))
         .filter(p => p.daysPending > 1)
         .sort((a, b) => b.daysPending - a.daysPending),
@@ -292,7 +328,7 @@ export class PaymentReconciliationJob {
         .map(p => ({
           id: p.id,
           externalId: p.externalId,
-          failureCode: p.failureCode
+          failureCode: p.failureCode,
         })),
 
       expiredPayments: payments
@@ -300,15 +336,18 @@ export class PaymentReconciliationJob {
         .map(p => ({
           id: p.id,
           externalId: p.externalId,
-          expiredAt: p.expiredAt!
+          expiredAt: p.expiredAt!,
         }))
-        .sort((a, b) => b.expiredAt.getTime() - a.expiredAt.getTime())
+        .sort((a, b) => b.expiredAt.getTime() - a.expiredAt.getTime()),
     };
 
     logger.info('Reconciliation report generated', {
       days,
       totalPayments: summary.totalPayments,
-      issuesFound: issues.longPendingPayments.length + issues.failedPayments.length + issues.expiredPayments.length
+      issuesFound:
+        issues.longPendingPayments.length +
+        issues.failedPayments.length +
+        issues.expiredPayments.length,
     });
 
     return { summary, issues };
@@ -323,7 +362,7 @@ export class PaymentReconciliationJob {
   } {
     return {
       isRunning: this.isRunning,
-      lastRunTime: this.lastRunTime
+      lastRunTime: this.lastRunTime,
     };
   }
 }

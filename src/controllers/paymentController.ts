@@ -13,28 +13,44 @@ const createInvoiceSchema = Joi.object({
   donationId: Joi.string().length(26).required(),
   payerEmail: Joi.string().email().optional(),
   description: Joi.string().min(1).max(500).required(),
-  paymentMethods: Joi.array().items(
-    Joi.string().valid('BANK_TRANSFER', 'CREDIT_CARD', 'EWALLET', 'RETAIL_OUTLET')
-  ).optional()
+  paymentMethods: Joi.array()
+    .items(
+      Joi.string().valid(
+        'BANK_TRANSFER',
+        'CREDIT_CARD',
+        'EWALLET',
+        'RETAIL_OUTLET'
+      )
+    )
+    .optional(),
 });
 
 const createVASchema = Joi.object({
   donationId: Joi.string().length(26).required(),
-  bankCode: Joi.string().valid(...Object.keys(SUPPORTED_VA_BANKS)).required(),
-  customerName: Joi.string().min(1).max(100).required()
+  bankCode: Joi.string()
+    .valid(...Object.keys(SUPPORTED_VA_BANKS))
+    .required(),
+  customerName: Joi.string().min(1).max(100).required(),
 });
 
 const createEwalletSchema = Joi.object({
   donationId: Joi.string().length(26).required(),
-  ewalletType: Joi.string().valid(...Object.keys(SUPPORTED_EWALLETS)).required(),
-  phone: Joi.string().pattern(/^(\+62|62|0)8[1-9][0-9]{6,9}$/).optional(), // Indonesian mobile number
-  redirectUrl: Joi.string().uri().optional()
+  ewalletType: Joi.string()
+    .valid(...Object.keys(SUPPORTED_EWALLETS))
+    .required(),
+  phone: Joi.string()
+    .pattern(/^(\+62|62|0)8[1-9][0-9]{6,9}$/)
+    .optional(), // Indonesian mobile number
+  redirectUrl: Joi.string().uri().optional(),
 });
 
 /**
  * Create an invoice payment
  */
-export const createInvoice = async (req: Request, res: Response): Promise<void> => {
+export const createInvoice = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = createInvoiceSchema.validate(req.body);
     if (error) {
@@ -52,23 +68,29 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
     }
 
     // Check authorization
-    if (donation.userId && donation.userId !== req.user?.id && req.user?.role !== 'ADMIN') {
-      res.status(403).json({ message: 'Not authorized to create payment for this donation' });
+    if (
+      donation.userId &&
+      donation.userId !== req.user?.id &&
+      req.user?.role !== 'ADMIN'
+    ) {
+      res.status(403).json({
+        message: 'Not authorized to create payment for this donation',
+      });
       return;
     }
 
     // Check if payment already exists for this donation
     const existingPayment = await Payment.findOne({
-      where: { 
+      where: {
         donationId,
-        status: [PaymentStatus.PENDING, PaymentStatus.PAID]
-      }
+        status: [PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     });
 
     if (existingPayment) {
-      res.status(409).json({ 
+      res.status(409).json({
         message: 'Payment already exists for this donation',
-        payment: existingPayment 
+        payment: existingPayment,
       });
       return;
     }
@@ -76,24 +98,27 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
     const payment = await paymentService.createInvoice(donationId, {
       payerEmail,
       description,
-      paymentMethods
+      paymentMethods,
     });
 
     // Update donation payment method
     await donation.update({ paymentMethod: PaymentMethod.INVOICE });
 
-    logger.info('Invoice payment created', { 
-      paymentId: payment.id, 
-      donationId, 
-      userId: req.user?.id 
+    logger.info('Invoice payment created', {
+      paymentId: payment.id,
+      donationId,
+      userId: req.user?.id,
     });
 
     res.status(201).json({
       message: 'Invoice payment created successfully',
-      payment: payment.toJSON()
+      payment: payment.toJSON(),
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id, body: req.body }, 'Error creating invoice payment');
+    logger.error(
+      { err: error, userId: req.user?.id, body: req.body },
+      'Error creating invoice payment'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -101,7 +126,10 @@ export const createInvoice = async (req: Request, res: Response): Promise<void> 
 /**
  * Create a virtual account payment
  */
-export const createVirtualAccount = async (req: Request, res: Response): Promise<void> => {
+export const createVirtualAccount = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = createVASchema.validate(req.body);
     if (error) {
@@ -119,48 +147,57 @@ export const createVirtualAccount = async (req: Request, res: Response): Promise
     }
 
     // Check authorization
-    if (donation.userId && donation.userId !== req.user?.id && req.user?.role !== 'ADMIN') {
-      res.status(403).json({ message: 'Not authorized to create payment for this donation' });
+    if (
+      donation.userId &&
+      donation.userId !== req.user?.id &&
+      req.user?.role !== 'ADMIN'
+    ) {
+      res.status(403).json({
+        message: 'Not authorized to create payment for this donation',
+      });
       return;
     }
 
     // Check if payment already exists for this donation
     const existingPayment = await Payment.findOne({
-      where: { 
+      where: {
         donationId,
-        status: [PaymentStatus.PENDING, PaymentStatus.PAID]
-      }
+        status: [PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     });
 
     if (existingPayment) {
-      res.status(409).json({ 
+      res.status(409).json({
         message: 'Payment already exists for this donation',
-        payment: existingPayment 
+        payment: existingPayment,
       });
       return;
     }
 
     const payment = await paymentService.createVirtualAccount(donationId, {
       bankCode,
-      customerName
+      customerName,
     });
 
     // Update donation payment method
     await donation.update({ paymentMethod: PaymentMethod.VIRTUAL_ACCOUNT });
 
-    logger.info('Virtual account payment created', { 
-      paymentId: payment.id, 
-      donationId, 
+    logger.info('Virtual account payment created', {
+      paymentId: payment.id,
+      donationId,
       bankCode,
-      userId: req.user?.id 
+      userId: req.user?.id,
     });
 
     res.status(201).json({
       message: 'Virtual account payment created successfully',
-      payment: payment.toJSON()
+      payment: payment.toJSON(),
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id, body: req.body }, 'Error creating virtual account payment');
+    logger.error(
+      { err: error, userId: req.user?.id, body: req.body },
+      'Error creating virtual account payment'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -168,7 +205,10 @@ export const createVirtualAccount = async (req: Request, res: Response): Promise
 /**
  * Create an e-wallet payment
  */
-export const createEwallet = async (req: Request, res: Response): Promise<void> => {
+export const createEwallet = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = createEwalletSchema.validate(req.body);
     if (error) {
@@ -186,23 +226,29 @@ export const createEwallet = async (req: Request, res: Response): Promise<void> 
     }
 
     // Check authorization
-    if (donation.userId && donation.userId !== req.user?.id && req.user?.role !== 'ADMIN') {
-      res.status(403).json({ message: 'Not authorized to create payment for this donation' });
+    if (
+      donation.userId &&
+      donation.userId !== req.user?.id &&
+      req.user?.role !== 'ADMIN'
+    ) {
+      res.status(403).json({
+        message: 'Not authorized to create payment for this donation',
+      });
       return;
     }
 
     // Check if payment already exists for this donation
     const existingPayment = await Payment.findOne({
-      where: { 
+      where: {
         donationId,
-        status: [PaymentStatus.PENDING, PaymentStatus.PAID]
-      }
+        status: [PaymentStatus.PENDING, PaymentStatus.PAID],
+      },
     });
 
     if (existingPayment) {
-      res.status(409).json({ 
+      res.status(409).json({
         message: 'Payment already exists for this donation',
-        payment: existingPayment 
+        payment: existingPayment,
       });
       return;
     }
@@ -210,25 +256,28 @@ export const createEwallet = async (req: Request, res: Response): Promise<void> 
     const payment = await paymentService.createEwallet(donationId, {
       ewalletType,
       phone,
-      redirectUrl
+      redirectUrl,
     });
 
     // Update donation payment method
     await donation.update({ paymentMethod: PaymentMethod.EWALLET });
 
-    logger.info('E-wallet payment created', { 
-      paymentId: payment.id, 
-      donationId, 
+    logger.info('E-wallet payment created', {
+      paymentId: payment.id,
+      donationId,
       ewalletType,
-      userId: req.user?.id 
+      userId: req.user?.id,
     });
 
     res.status(201).json({
       message: 'E-wallet payment created successfully',
-      payment: payment.toJSON()
+      payment: payment.toJSON(),
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id, body: req.body }, 'Error creating e-wallet payment');
+    logger.error(
+      { err: error, userId: req.user?.id, body: req.body },
+      'Error creating e-wallet payment'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -236,7 +285,10 @@ export const createEwallet = async (req: Request, res: Response): Promise<void> 
 /**
  * Get payment status
  */
-export const getPaymentStatus = async (req: Request, res: Response): Promise<void> => {
+export const getPaymentStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -248,14 +300,21 @@ export const getPaymentStatus = async (req: Request, res: Response): Promise<voi
 
     // Check authorization - user can only see their own payments or admins can see all
     const donation = await Donation.findByPk(payment.donationId);
-    if (donation?.userId && donation.userId !== req.user?.id && req.user?.role !== 'ADMIN') {
+    if (
+      donation?.userId &&
+      donation.userId !== req.user?.id &&
+      req.user?.role !== 'ADMIN'
+    ) {
       res.status(403).json({ message: 'Not authorized to view this payment' });
       return;
     }
 
     res.json({ payment: payment.toJSON() });
   } catch (error: any) {
-    logger.error({ err: error, paymentId: req.params.id, userId: req.user?.id }, 'Error getting payment status');
+    logger.error(
+      { err: error, paymentId: req.params.id, userId: req.user?.id },
+      'Error getting payment status'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -263,7 +322,10 @@ export const getPaymentStatus = async (req: Request, res: Response): Promise<voi
 /**
  * Cancel a payment
  */
-export const cancelPayment = async (req: Request, res: Response): Promise<void> => {
+export const cancelPayment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -275,8 +337,14 @@ export const cancelPayment = async (req: Request, res: Response): Promise<void> 
 
     // Check authorization
     const donation = await Donation.findByPk(payment.donationId);
-    if (donation?.userId && donation.userId !== req.user?.id && req.user?.role !== 'ADMIN') {
-      res.status(403).json({ message: 'Not authorized to cancel this payment' });
+    if (
+      donation?.userId &&
+      donation.userId !== req.user?.id &&
+      req.user?.role !== 'ADMIN'
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Not authorized to cancel this payment' });
       return;
     }
 
@@ -291,10 +359,13 @@ export const cancelPayment = async (req: Request, res: Response): Promise<void> 
 
     res.json({
       message: 'Payment cancelled successfully',
-      payment: cancelledPayment?.toJSON()
+      payment: cancelledPayment?.toJSON(),
     });
   } catch (error: any) {
-    logger.error({ err: error, paymentId: req.params.id, userId: req.user?.id }, 'Error cancelling payment');
+    logger.error(
+      { err: error, paymentId: req.params.id, userId: req.user?.id },
+      'Error cancelling payment'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -302,7 +373,10 @@ export const cancelPayment = async (req: Request, res: Response): Promise<void> 
 /**
  * Get user's payments
  */
-export const getMyPayments = async (req: Request, res: Response): Promise<void> => {
+export const getMyPayments = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
@@ -311,18 +385,24 @@ export const getMyPayments = async (req: Request, res: Response): Promise<void> 
     const { status, method } = req.query;
     const whereClause: any = {};
 
-    if (status && Object.values(PaymentStatus).includes(status as PaymentStatus)) {
+    if (
+      status &&
+      Object.values(PaymentStatus).includes(status as PaymentStatus)
+    ) {
       whereClause.status = status;
     }
 
-    if (method && Object.values(PaymentMethod).includes(method as PaymentMethod)) {
+    if (
+      method &&
+      Object.values(PaymentMethod).includes(method as PaymentMethod)
+    ) {
       whereClause.method = method;
     }
 
     // Get donations by user first, then find payments
     const userDonations = await Donation.findAll({
       where: { userId: req.user?.id },
-      attributes: ['id']
+      attributes: ['id'],
     });
 
     const donationIds = userDonations.map(d => d.id);
@@ -330,20 +410,24 @@ export const getMyPayments = async (req: Request, res: Response): Promise<void> 
     const { count, rows: payments } = await Payment.findAndCountAll({
       where: {
         donationId: donationIds,
-        ...whereClause
+        ...whereClause,
       },
-      include: [{
-        model: Donation,
-        as: 'donation',
-        include: [{
-          model: require('../models').Project,
-          as: 'project',
-          attributes: ['id', 'title']
-        }]
-      }],
+      include: [
+        {
+          model: Donation,
+          as: 'donation',
+          include: [
+            {
+              model: require('../models').Project,
+              as: 'project',
+              attributes: ['id', 'title'],
+            },
+          ],
+        },
+      ],
       limit,
       offset,
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -355,11 +439,14 @@ export const getMyPayments = async (req: Request, res: Response): Promise<void> 
         totalPages,
         totalItems: count,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error getting user payments');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error getting user payments'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -367,24 +454,33 @@ export const getMyPayments = async (req: Request, res: Response): Promise<void> 
 /**
  * Get available payment methods
  */
-export const getPaymentMethods = async (req: Request, res: Response): Promise<void> => {
+export const getPaymentMethods = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const paymentMethods = {
       invoice: {
         name: 'Invoice',
-        description: 'Pay via bank transfer, credit card, e-wallet, or retail outlet',
-        supportedMethods: ['BANK_TRANSFER', 'CREDIT_CARD', 'EWALLET', 'RETAIL_OUTLET']
+        description:
+          'Pay via bank transfer, credit card, e-wallet, or retail outlet',
+        supportedMethods: [
+          'BANK_TRANSFER',
+          'CREDIT_CARD',
+          'EWALLET',
+          'RETAIL_OUTLET',
+        ],
       },
       virtualAccount: {
         name: 'Virtual Account',
         description: 'Pay via bank transfer using virtual account number',
-        supportedBanks: Object.keys(SUPPORTED_VA_BANKS)
+        supportedBanks: Object.keys(SUPPORTED_VA_BANKS),
       },
       ewallet: {
         name: 'E-Wallet',
         description: 'Pay using digital wallet',
-        supportedTypes: Object.keys(SUPPORTED_EWALLETS)
-      }
+        supportedTypes: Object.keys(SUPPORTED_EWALLETS),
+      },
     };
 
     res.json({ paymentMethods });

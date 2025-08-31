@@ -14,20 +14,27 @@ const donationSchema = Joi.object({
   donorName: Joi.string().min(1).max(100).when('isAnonymous', {
     is: true,
     then: Joi.optional(),
-    otherwise: Joi.optional()
+    otherwise: Joi.optional(),
   }),
   message: Joi.string().max(500).optional(),
-  projectId: Joi.string().length(26).custom((value, helpers) => {
-    if (!isValidULID(value)) {
-      return helpers.error('any.invalid');
-    }
-    return value;
-  }).required().messages({
-    'any.invalid': 'Project ID must be a valid ULID'
-  })
+  projectId: Joi.string()
+    .length(26)
+    .custom((value, helpers) => {
+      if (!isValidULID(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
+    .required()
+    .messages({
+      'any.invalid': 'Project ID must be a valid ULID',
+    }),
 });
 
-export const createDonation = async (req: Request, res: Response): Promise<void> => {
+export const createDonation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = donationSchema.validate(req.body);
     if (error) {
@@ -52,7 +59,9 @@ export const createDonation = async (req: Request, res: Response): Promise<void>
     }
 
     if (project.currentAmount >= project.targetAmount) {
-      res.status(400).json({ message: 'Project has already reached its funding goal' });
+      res
+        .status(400)
+        .json({ message: 'Project has already reached its funding goal' });
       return;
     }
 
@@ -60,14 +69,16 @@ export const createDonation = async (req: Request, res: Response): Promise<void>
       amount: value.amount,
       isAnonymous: value.isAnonymous,
       message: value.message,
-      projectId: value.projectId
+      projectId: value.projectId,
     };
 
     if (value.isAnonymous) {
       donationData.donorName = value.donorName || 'Anonymous';
     } else {
       donationData.userId = req.user?.id;
-      donationData.donorName = req.user ? `${req.user.firstName} ${req.user.lastName}` : value.donorName;
+      donationData.donorName = req.user
+        ? `${req.user.firstName} ${req.user.lastName}`
+        : value.donorName;
     }
 
     const donation = await Donation.create(donationData);
@@ -77,33 +88,47 @@ export const createDonation = async (req: Request, res: Response): Promise<void>
         {
           model: Project,
           as: 'project',
-          attributes: ['id', 'title', 'targetAmount', 'currentAmount']
+          attributes: ['id', 'title', 'targetAmount', 'currentAmount'],
         },
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }
-      ]
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
+      ],
     });
 
     res.status(201).json({
       message: 'Donation created successfully',
-      donation: createdDonation
+      donation: createdDonation,
     });
   } catch (error: any) {
-    logger.error({ err: error, body: req.body, userId: req.user?.id }, 'Error creating donation');
+    logger.error(
+      { err: error, body: req.body, userId: req.user?.id },
+      'Error creating donation'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const getDonations = async (req: Request, res: Response): Promise<void> => {
+export const getDonations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = (page - 1) * limit;
 
-    const { projectId, userId, minAmount, maxAmount, isAnonymous, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const {
+      projectId,
+      userId,
+      minAmount,
+      maxAmount,
+      isAnonymous,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+    } = req.query;
 
     const whereClause: any = {};
 
@@ -128,7 +153,9 @@ export const getDonations = async (req: Request, res: Response): Promise<void> =
     }
 
     const validSortFields = ['createdAt', 'amount'];
-    const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+    const sortField = validSortFields.includes(sortBy as string)
+      ? (sortBy as string)
+      : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const { count, rows: donations } = await Donation.findAndCountAll({
@@ -137,17 +164,17 @@ export const getDonations = async (req: Request, res: Response): Promise<void> =
         {
           model: Project,
           as: 'project',
-          attributes: ['id', 'title', 'status']
+          attributes: ['id', 'title', 'status'],
         },
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
       ],
       limit,
       offset,
-      order: [[sortField, sortDirection]]
+      order: [[sortField, sortDirection]],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -159,8 +186,8 @@ export const getDonations = async (req: Request, res: Response): Promise<void> =
         totalPages,
         totalItems: count,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
     logger.error({ err: error, query: req.query }, 'Error fetching donations');
@@ -168,7 +195,10 @@ export const getDonations = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const getDonationById = async (req: Request, res: Response): Promise<void> => {
+export const getDonationById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -178,18 +208,20 @@ export const getDonationById = async (req: Request, res: Response): Promise<void
           model: Project,
           as: 'project',
           attributes: ['id', 'title', 'status'],
-          include: [{
-            model: User,
-            as: 'fundraiser',
-            attributes: ['id', 'username', 'firstName', 'lastName']
-          }]
+          include: [
+            {
+              model: User,
+              as: 'fundraiser',
+              attributes: ['id', 'username', 'firstName', 'lastName'],
+            },
+          ],
         },
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }
-      ]
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
+      ],
     });
 
     if (!donation) {
@@ -199,12 +231,18 @@ export const getDonationById = async (req: Request, res: Response): Promise<void
 
     res.json({ donation });
   } catch (error: any) {
-    logger.error({ err: error, donationId: req.params.id }, 'Error fetching donation');
+    logger.error(
+      { err: error, donationId: req.params.id },
+      'Error fetching donation'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const getMyDonations = async (req: Request, res: Response): Promise<void> => {
+export const getMyDonations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
@@ -214,30 +252,42 @@ export const getMyDonations = async (req: Request, res: Response): Promise<void>
     const whereClause: any = { userId: req.user?.id };
 
     const validSortFields = ['createdAt', 'amount'];
-    const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+    const sortField = validSortFields.includes(sortBy as string)
+      ? (sortBy as string)
+      : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const { count, rows: donations } = await Donation.findAndCountAll({
       where: whereClause,
-      include: [{
-        model: Project,
-        as: 'project',
-        attributes: ['id', 'title', 'status', 'targetAmount', 'currentAmount'],
-        include: [{
-          model: User,
-          as: 'fundraiser',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }]
-      }],
+      include: [
+        {
+          model: Project,
+          as: 'project',
+          attributes: [
+            'id',
+            'title',
+            'status',
+            'targetAmount',
+            'currentAmount',
+          ],
+          include: [
+            {
+              model: User,
+              as: 'fundraiser',
+              attributes: ['id', 'username', 'firstName', 'lastName'],
+            },
+          ],
+        },
+      ],
       limit,
       offset,
-      order: [[sortField, sortDirection]]
+      order: [[sortField, sortDirection]],
     });
 
     const totalPages = Math.ceil(count / limit);
 
     const totalDonated = await Donation.sum('amount', {
-      where: { userId: req.user?.id }
+      where: { userId: req.user?.id },
     });
 
     res.json({
@@ -248,16 +298,22 @@ export const getMyDonations = async (req: Request, res: Response): Promise<void>
         totalPages,
         totalItems: count,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error fetching user donations');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error fetching user donations'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export const getProjectDonations = async (req: Request, res: Response): Promise<void> => {
+export const getProjectDonations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { projectId } = req.params;
     const page = parseInt(req.query.page as string) || 1;
@@ -272,19 +328,23 @@ export const getProjectDonations = async (req: Request, res: Response): Promise<
 
     const { sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
     const validSortFields = ['createdAt', 'amount'];
-    const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+    const sortField = validSortFields.includes(sortBy as string)
+      ? (sortBy as string)
+      : 'createdAt';
     const sortDirection = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const { count, rows: donations } = await Donation.findAndCountAll({
       where: { projectId },
-      include: [{
-        model: User,
-        as: 'user',
-        attributes: ['id', 'username', 'firstName', 'lastName']
-      }],
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'firstName', 'lastName'],
+        },
+      ],
       limit,
       offset,
-      order: [[sortField, sortDirection]]
+      order: [[sortField, sortDirection]],
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -292,7 +352,8 @@ export const getProjectDonations = async (req: Request, res: Response): Promise<
     const stats = {
       totalAmount: project.currentAmount,
       donationCount: count,
-      averageDonation: count > 0 ? parseFloat((project.currentAmount / count).toFixed(2)) : 0
+      averageDonation:
+        count > 0 ? parseFloat((project.currentAmount / count).toFixed(2)) : 0,
     };
 
     res.json({
@@ -303,11 +364,14 @@ export const getProjectDonations = async (req: Request, res: Response): Promise<
         totalPages,
         totalItems: count,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.projectId }, 'Error fetching project donations');
+    logger.error(
+      { err: error, projectId: req.params.projectId },
+      'Error fetching project donations'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };

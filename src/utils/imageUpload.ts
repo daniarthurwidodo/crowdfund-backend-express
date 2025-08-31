@@ -15,7 +15,7 @@ export const initializeUploadDirectories = (): void => {
   const projectsDir = path.join(uploadsDir, 'projects');
 
   const directories = [uploadsDir, avatarsDir, projectsDir];
-  
+
   directories.forEach(dir => {
     try {
       if (!fs.existsSync(dir)) {
@@ -27,11 +27,14 @@ export const initializeUploadDirectories = (): void => {
         logger.debug(`Upload directory verified: ${dir}`);
       }
     } catch (error) {
-      logger.error({ err: error, dir }, `Failed to initialize upload directory: ${dir}`);
+      logger.error(
+        { err: error, dir },
+        `Failed to initialize upload directory: ${dir}`
+      );
       throw new Error(`Cannot create or access upload directory: ${dir}`);
     }
   });
-  
+
   logger.info('Upload directories initialized successfully');
 };
 
@@ -43,12 +46,21 @@ const AVATAR_SIZE = 400;
 const PROJECT_IMAGE_WIDTH = 800;
 const PROJECT_IMAGE_HEIGHT = 600;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+];
 
 // Multer configuration
 const storage = multer.memoryStorage();
 
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
   if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -61,21 +73,24 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: MAX_FILE_SIZE,
-    files: 10 // Maximum 10 files for project images
-  }
+    files: 10, // Maximum 10 files for project images
+  },
 });
 
 // Process and save avatar image
-export const processAvatar = async (buffer: Buffer, filename: string): Promise<string> => {
+export const processAvatar = async (
+  buffer: Buffer,
+  filename: string
+): Promise<string> => {
   try {
     const uploadsDir = path.join(process.cwd(), 'uploads');
     const avatarsDir = path.join(uploadsDir, 'avatars');
     const outputPath = path.join(avatarsDir, `${filename}.webp`);
-    
+
     await sharp(buffer)
       .resize(AVATAR_SIZE, AVATAR_SIZE, {
         fit: 'cover',
-        position: 'center'
+        position: 'center',
       })
       .webp({ quality: 85 })
       .toFile(outputPath);
@@ -90,16 +105,19 @@ export const processAvatar = async (buffer: Buffer, filename: string): Promise<s
 };
 
 // Process and save project image
-export const processProjectImage = async (buffer: Buffer, filename: string): Promise<string> => {
+export const processProjectImage = async (
+  buffer: Buffer,
+  filename: string
+): Promise<string> => {
   try {
     const uploadsDir = path.join(process.cwd(), 'uploads');
     const projectsDir = path.join(uploadsDir, 'projects');
     const outputPath = path.join(projectsDir, `${filename}.webp`);
-    
+
     await sharp(buffer)
       .resize(PROJECT_IMAGE_WIDTH, PROJECT_IMAGE_HEIGHT, {
         fit: 'cover',
-        position: 'center'
+        position: 'center',
       })
       .webp({ quality: 85 })
       .toFile(outputPath);
@@ -136,28 +154,33 @@ export const uploadProjectImages = upload.array('images', 10);
 export const uploadSingleProjectImage = upload.single('image');
 
 // Error handling middleware for multer
-export const handleUploadError = (error: any, req: Request, res: Response, next: NextFunction) => {
+export const handleUploadError = (
+  error: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
-        message: 'File too large. Maximum size is 5MB per image.'
+        message: 'File too large. Maximum size is 5MB per image.',
       });
     }
     if (error.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({
-        message: 'Too many files. Maximum 10 images allowed.'
+        message: 'Too many files. Maximum 10 images allowed.',
       });
     }
     if (error.code === 'LIMIT_UNEXPECTED_FILE') {
       return res.status(400).json({
-        message: 'Unexpected file field. Please check your form field names.'
+        message: 'Unexpected file field. Please check your form field names.',
       });
     }
   }
-  
+
   if (error.message === 'Only JPEG, PNG, and WebP images are allowed') {
     return res.status(400).json({
-      message: error.message
+      message: error.message,
     });
   }
 
@@ -177,11 +200,13 @@ export const generateFilename = (originalName?: string): string => {
 export const validateImageDimensions = (minWidth = 100, minHeight = 100) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const files = req.files as Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+      const files = req.files as
+        | Express.Multer.File[]
+        | { [fieldname: string]: Express.Multer.File[] };
       const file = req.file as Express.Multer.File;
 
       const filesToCheck: Express.Multer.File[] = [];
-      
+
       if (file) {
         filesToCheck.push(file);
       } else if (Array.isArray(files)) {
@@ -196,16 +221,16 @@ export const validateImageDimensions = (minWidth = 100, minHeight = 100) => {
 
       for (const f of filesToCheck) {
         const metadata = await sharp(f.buffer).metadata();
-        
+
         if (!metadata.width || !metadata.height) {
           return res.status(400).json({
-            message: 'Unable to determine image dimensions'
+            message: 'Unable to determine image dimensions',
           });
         }
 
         if (metadata.width < minWidth || metadata.height < minHeight) {
           return res.status(400).json({
-            message: `Image dimensions must be at least ${minWidth}x${minHeight} pixels`
+            message: `Image dimensions must be at least ${minWidth}x${minHeight} pixels`,
           });
         }
       }
@@ -214,7 +239,7 @@ export const validateImageDimensions = (minWidth = 100, minHeight = 100) => {
     } catch (error) {
       logger.error({ err: error }, 'Error validating image dimensions');
       res.status(400).json({
-        message: 'Invalid image file'
+        message: 'Invalid image file',
       });
     }
   };

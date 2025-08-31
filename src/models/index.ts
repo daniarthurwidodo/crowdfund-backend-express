@@ -5,29 +5,40 @@ import ProjectModel from './project';
 import DonationModel from './donation';
 import PaymentModel from './payment';
 import WithdrawModel from './withdraw';
-import { UserInstance, ProjectInstance, DonationInstance, PaymentInstance, WithdrawInstance } from '../types';
+import {
+  UserInstance,
+  ProjectInstance,
+  DonationInstance,
+  PaymentInstance,
+  WithdrawInstance,
+} from '../types';
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env as keyof typeof config];
 
-const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, {
-  host: dbConfig.host,
-  port: dbConfig.port,
-  dialect: dbConfig.dialect,
-  logging: dbConfig.logging,
-  pool: dbConfig.pool || {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
+const sequelize = new Sequelize(
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
+  {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    dialect: dbConfig.dialect,
+    logging: dbConfig.logging,
+    pool: dbConfig.pool || {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
   }
-});
+);
 
 const User = UserModel(sequelize);
 const Project = ProjectModel(sequelize);
 const Donation = DonationModel(sequelize);
 const Payment = PaymentModel(sequelize);
-const Withdraw = WithdrawModel;
+const Withdraw = WithdrawModel(sequelize);
 
 const db = {
   sequelize,
@@ -36,7 +47,7 @@ const db = {
   Project,
   Donation,
   Payment,
-  Withdraw
+  Withdraw,
 };
 
 Object.values(db).forEach((model: any) => {
@@ -46,5 +57,11 @@ Object.values(db).forEach((model: any) => {
 });
 
 export { sequelize, Sequelize, User, Project, Donation, Payment, Withdraw };
-export type { UserInstance, ProjectInstance, DonationInstance, PaymentInstance, WithdrawInstance };
+export type {
+  UserInstance,
+  ProjectInstance,
+  DonationInstance,
+  PaymentInstance,
+  WithdrawInstance,
+};
 export default db;

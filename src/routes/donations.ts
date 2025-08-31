@@ -5,7 +5,7 @@ import {
   getDonations,
   getDonationById,
   getMyDonations,
-  getProjectDonations
+  getProjectDonations,
 } from '../controllers/donationController';
 
 const router = Router();

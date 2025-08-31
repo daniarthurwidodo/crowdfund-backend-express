@@ -6,7 +6,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const pinoConfig: pino.LoggerOptions = {
   level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
-  
+
   transport: isDevelopment
     ? {
         target: 'pino-pretty',
@@ -20,7 +20,7 @@ const pinoConfig: pino.LoggerOptions = {
     : undefined,
 
   formatters: {
-    level: (label) => {
+    level: label => {
       return { level: label.toUpperCase() };
     },
   },
@@ -62,7 +62,7 @@ export const httpLogger = pinoHttp({
     return 'info';
   },
   serializers: {
-    req: (req) => ({
+    req: req => ({
       method: req.method,
       url: req.url,
       version: req.headers['accept-version'],
@@ -70,14 +70,17 @@ export const httpLogger = pinoHttp({
       remoteAddress: req.ip,
       remotePort: req.connection?.remotePort,
     }),
-    res: (res) => ({
+    res: res => ({
       statusCode: res.statusCode,
       header: res.getHeaders?.(),
     }),
   },
 });
 
-export const createChildLogger = (name: string, additionalFields?: Record<string, any>) => {
+export const createChildLogger = (
+  name: string,
+  additionalFields?: Record<string, any>
+) => {
   return logger.child({ service: name, ...additionalFields });
 };
 

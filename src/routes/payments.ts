@@ -8,12 +8,12 @@ import {
   getPaymentStatus,
   cancelPayment,
   getMyPayments,
-  getPaymentMethods
+  getPaymentMethods,
 } from '../controllers/paymentController';
 import {
   handleXenditWebhook,
   testWebhook,
-  getWebhookLogs
+  getWebhookLogs,
 } from '../controllers/webhookController';
 
 const router = Router();

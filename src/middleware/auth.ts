@@ -6,7 +6,11 @@ interface JwtPayload {
   userId: string;
 }
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authenticateToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -16,9 +20,12 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JwtPayload;
     const user = await User.findByPk(decoded.userId);
-    
+
     if (!user) {
       res.status(401).json({ message: 'User not found' });
       return;
@@ -32,7 +39,11 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 };
 
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -42,9 +53,12 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JwtPayload;
     const user = await User.findByPk(decoded.userId);
-    
+
     if (user) {
       req.user = user;
     }
@@ -59,10 +73,8 @@ export const generateToken = (userId: string): string => {
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is required');
   }
-  
-  return jwt.sign(
-    { userId },
-    secret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' } as any
-  );
+
+  return jwt.sign({ userId }, secret, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  } as any);
 };

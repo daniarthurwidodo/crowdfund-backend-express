@@ -7,7 +7,7 @@ import {
   processAvatar,
   processProjectImage,
   generateFilename,
-  validateImageDimensions
+  validateImageDimensions,
 } from '../utils/imageUpload';
 import { authenticateToken } from '../middleware/auth';
 import { User, Project } from '../models';
@@ -136,19 +136,19 @@ router.post(
       const filename = generateFilename(req.file.originalname);
       const avatarUrl = await processAvatar(req.file.buffer, filename);
 
-      await User.update(
-        { avatar: avatarUrl },
-        { where: { id: req.user.id } }
-      );
+      await User.update({ avatar: avatarUrl }, { where: { id: req.user.id } });
 
       logger.info(`Avatar uploaded for user ${req.user.id}: ${avatarUrl}`);
 
       res.json({
         message: 'Avatar uploaded successfully',
-        avatarUrl
+        avatarUrl,
       });
     } catch (error: any) {
-      logger.error({ err: error, userId: req.user?.id }, 'Error uploading avatar');
+      logger.error(
+        { err: error, userId: req.user?.id },
+        'Error uploading avatar'
+      );
       res.status(500).json({ message: 'Failed to upload avatar' });
     }
   }
@@ -232,7 +232,9 @@ router.post(
       }
 
       if (project.fundraiserId !== req.user.id && req.user.role !== 'ADMIN') {
-        return res.status(403).json({ message: 'Not authorized to modify this project' });
+        return res
+          .status(403)
+          .json({ message: 'Not authorized to modify this project' });
       }
 
       const imageUrls: string[] = [];
@@ -247,22 +249,29 @@ router.post(
 
       await project.update({ images: updatedImages });
       await project.reload({
-        include: [{
-          model: User,
-          as: 'fundraiser',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }]
+        include: [
+          {
+            model: User,
+            as: 'fundraiser',
+            attributes: ['id', 'username', 'firstName', 'lastName'],
+          },
+        ],
       });
 
-      logger.info(`${imageUrls.length} images uploaded for project ${projectId}`);
+      logger.info(
+        `${imageUrls.length} images uploaded for project ${projectId}`
+      );
 
       res.json({
         message: 'Images uploaded successfully',
         imageUrls,
-        project
+        project,
       });
     } catch (error: any) {
-      logger.error({ err: error, projectId: req.params.projectId, userId: req.user?.id }, 'Error uploading project images');
+      logger.error(
+        { err: error, projectId: req.params.projectId, userId: req.user?.id },
+        'Error uploading project images'
+      );
       res.status(500).json({ message: 'Failed to upload project images' });
     }
   }
@@ -342,7 +351,9 @@ router.post(
       }
 
       if (project.fundraiserId !== req.user.id && req.user.role !== 'ADMIN') {
-        return res.status(403).json({ message: 'Not authorized to modify this project' });
+        return res
+          .status(403)
+          .json({ message: 'Not authorized to modify this project' });
       }
 
       const filename = generateFilename(req.file.originalname);
@@ -353,11 +364,13 @@ router.post(
 
       await project.update({ images: updatedImages });
       await project.reload({
-        include: [{
-          model: User,
-          as: 'fundraiser',
-          attributes: ['id', 'username', 'firstName', 'lastName']
-        }]
+        include: [
+          {
+            model: User,
+            as: 'fundraiser',
+            attributes: ['id', 'username', 'firstName', 'lastName'],
+          },
+        ],
       });
 
       logger.info(`Image uploaded for project ${projectId}: ${imageUrl}`);
@@ -365,10 +378,13 @@ router.post(
       res.json({
         message: 'Image uploaded successfully',
         imageUrl,
-        project
+        project,
       });
     } catch (error: any) {
-      logger.error({ err: error, projectId: req.params.projectId, userId: req.user?.id }, 'Error uploading project image');
+      logger.error(
+        { err: error, projectId: req.params.projectId, userId: req.user?.id },
+        'Error uploading project image'
+      );
       res.status(500).json({ message: 'Failed to upload project image' });
     }
   }

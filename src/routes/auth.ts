@@ -13,12 +13,15 @@ const registerSchema = Joi.object({
   password: Joi.string().min(6).required(),
   firstName: Joi.string().min(1).max(50).required(),
   lastName: Joi.string().min(1).max(50).required(),
-  role: Joi.string().valid(...Object.values(UserRole)).optional().default(UserRole.USER)
+  role: Joi.string()
+    .valid(...Object.values(UserRole))
+    .optional()
+    .default(UserRole.USER),
 });
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
-  password: Joi.string().required()
+  password: Joi.string().required(),
 });
 
 /**
@@ -163,15 +166,14 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
     const existingUser = await User.findOne({
       where: {
-        [Op.or]: [
-          { email: value.email },
-          { username: value.username }
-        ]
-      }
+        [Op.or]: [{ email: value.email }, { username: value.username }],
+      },
     });
 
     if (existingUser) {
-      res.status(409).json({ message: 'User already exists with this email or username' });
+      res
+        .status(409)
+        .json({ message: 'User already exists with this email or username' });
       return;
     }
 
@@ -181,7 +183,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: user.toJSON()
+      user: user.toJSON(),
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -224,7 +226,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     const user = await User.findOne({ where: { email: value.email } });
-    if (!user || !await user.validatePassword(value.password)) {
+    if (!user || !(await user.validatePassword(value.password))) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
@@ -235,14 +237,14 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     await user.update({ lastLoginAt: new Date() });
-    
+
     const token = generateToken(user.id);
     req.session.userId = user.id;
 
     res.json({
       message: 'Login successful',
       token,
-      user: user.toJSON()
+      user: user.toJSON(),
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -271,15 +273,19 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
  *       500:
  *         description: Internal server error
  */
-router.post('/logout', authenticateToken, (req: Request, res: Response): void => {
-  req.session.destroy((err) => {
-    if (err) {
-      res.status(500).json({ message: 'Could not log out' });
-      return;
-    }
-    res.json({ message: 'Logout successful' });
-  });
-});
+router.post(
+  '/logout',
+  authenticateToken,
+  (req: Request, res: Response): void => {
+    req.session.destroy(err => {
+      if (err) {
+        res.status(500).json({ message: 'Could not log out' });
+        return;
+      }
+      res.json({ message: 'Logout successful' });
+    });
+  }
+);
 
 /**
  * @swagger

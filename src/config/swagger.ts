@@ -7,54 +7,52 @@ const options: Options = {
     info: {
       title: 'Crowdfund Backend API',
       version: '1.0.0',
-      description: 'A comprehensive crowdfunding backend API built with Express.js, TypeScript, Sequelize, PostgreSQL, and Redis',
+      description:
+        'A comprehensive crowdfunding backend API built with Express.js, TypeScript, Sequelize, PostgreSQL, and Redis',
       contact: {
         name: 'API Support',
-        email: 'support@crowdfund.com'
-      }
+        email: 'support@crowdfund.com',
+      },
     },
     servers: [
       {
         url: process.env.API_URL || 'http://localhost:3000',
-        description: 'Development server'
-      }
+        description: 'Development server',
+      },
     ],
     components: {
       securitySchemes: {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
+          bearerFormat: 'JWT',
+        },
+      },
     },
     tags: [
       {
         name: 'Health',
-        description: 'Health check endpoints'
+        description: 'Health check endpoints',
       },
       {
         name: 'Authentication',
-        description: 'User authentication endpoints'
+        description: 'User authentication endpoints',
       },
       {
         name: 'Users',
-        description: 'User management endpoints'
+        description: 'User management endpoints',
       },
       {
         name: 'Projects',
-        description: 'Project management endpoints for crowdfunding campaigns'
+        description: 'Project management endpoints for crowdfunding campaigns',
       },
       {
         name: 'Donations',
-        description: 'Donation management endpoints'
-      }
-    ]
+        description: 'Donation management endpoints',
+      },
+    ],
   },
-  apis: [
-    './src/routes/*.ts',
-    './src/models/*.ts'
-  ]
+  apis: ['./src/routes/*.ts', './src/models/*.ts'],
 };
 
 export const specs = swaggerJsdoc(options);

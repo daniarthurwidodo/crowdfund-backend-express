@@ -9,8 +9,8 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      res.status(403).json({ 
-        message: `Insufficient permissions. Required roles: ${allowedRoles.join(', ')}. Your role: ${req.user.role}` 
+      res.status(403).json({
+        message: `Insufficient permissions. Required roles: ${allowedRoles.join(', ')}. Your role: ${req.user.role}`,
       });
       return;
     }
@@ -21,7 +21,11 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
 
 export const requireAdmin = requireRole(UserRole.ADMIN);
 
-export const requireAdminOrSelf = (req: Request, res: Response, next: NextFunction): void => {
+export const requireAdminOrSelf = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   if (!req.user) {
     res.status(401).json({ message: 'Authentication required' });
     return;
@@ -31,8 +35,9 @@ export const requireAdminOrSelf = (req: Request, res: Response, next: NextFuncti
   const isOwner = req.user.id === req.params.id;
 
   if (!isAdmin && !isOwner) {
-    res.status(403).json({ 
-      message: 'Insufficient permissions. Admin role required or must be accessing own resource.' 
+    res.status(403).json({
+      message:
+        'Insufficient permissions. Admin role required or must be accessing own resource.',
     });
     return;
   }
@@ -40,4 +45,7 @@ export const requireAdminOrSelf = (req: Request, res: Response, next: NextFuncti
   next();
 };
 
-export const requireFundraiserOrAdmin = requireRole(UserRole.FUNDRAISER, UserRole.ADMIN);
+export const requireFundraiserOrAdmin = requireRole(
+  UserRole.FUNDRAISER,
+  UserRole.ADMIN
+);

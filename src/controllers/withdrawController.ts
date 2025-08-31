@@ -12,24 +12,31 @@ const logger = createChildLogger('WithdrawController');
 const withdrawRequestSchema = Joi.object({
   projectId: Joi.string().length(26).required(),
   amount: Joi.number().integer().min(10000).max(100000000000).required(),
-  method: Joi.string().valid(...Object.values(WithdrawMethod)).required(),
+  method: Joi.string()
+    .valid(...Object.values(WithdrawMethod))
+    .required(),
   reason: Joi.string().max(500).optional(),
   bankAccount: Joi.when('method', {
-    is: Joi.valid(WithdrawMethod.BANK_TRANSFER, WithdrawMethod.XENDIT_DISBURSEMENT),
+    is: Joi.valid(
+      WithdrawMethod.BANK_TRANSFER,
+      WithdrawMethod.XENDIT_DISBURSEMENT
+    ),
     then: Joi.object({
       bankName: Joi.string().max(100).required(),
       bankCode: Joi.string().max(10).required(),
       accountNumber: Joi.string().max(50).required(),
-      accountHolderName: Joi.string().max(100).required()
+      accountHolderName: Joi.string().max(100).required(),
     }).required(),
-    otherwise: Joi.optional()
-  })
+    otherwise: Joi.optional(),
+  }),
 });
 
 const approvalSchema = Joi.object({
   approved: Joi.boolean().required(),
   adminNotes: Joi.string().max(1000).optional(),
-  processingMethod: Joi.string().valid(...Object.values(WithdrawMethod)).optional()
+  processingMethod: Joi.string()
+    .valid(...Object.values(WithdrawMethod))
+    .optional(),
 });
 
 /**
@@ -56,23 +63,32 @@ const approvalSchema = Joi.object({
  *       404:
  *         description: Project not found
  */
-export const checkEligibility = async (req: Request, res: Response): Promise<void> => {
+export const checkEligibility = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { projectId } = req.params;
-    
+
     if (!req.user) {
       res.status(401).json({ message: 'Authentication required' });
       return;
     }
 
-    const eligibility = await withdrawService.checkWithdrawEligibility(projectId, req.user.id);
+    const eligibility = await withdrawService.checkWithdrawEligibility(
+      projectId,
+      req.user.id
+    );
 
     res.json({
       message: 'Eligibility check completed',
-      eligibility
+      eligibility,
     });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.projectId, userId: req.user?.id }, 'Error checking withdrawal eligibility');
+    logger.error(
+      { err: error, projectId: req.params.projectId, userId: req.user?.id },
+      'Error checking withdrawal eligibility'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -130,7 +146,10 @@ export const checkEligibility = async (req: Request, res: Response): Promise<voi
  *       403:
  *         description: Not authorized or insufficient funds
  */
-export const createWithdraw = async (req: Request, res: Response): Promise<void> => {
+export const createWithdraw = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = withdrawRequestSchema.validate(req.body);
     if (error) {
@@ -143,11 +162,14 @@ export const createWithdraw = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const withdrawal = await withdrawService.createWithdrawRequest(req.user.id, value);
+    const withdrawal = await withdrawService.createWithdrawRequest(
+      req.user.id,
+      value
+    );
 
     res.status(201).json({
       message: 'Withdrawal request created successfully',
-      withdrawal: withdrawal.toJSON()
+      withdrawal: withdrawal.toJSON(),
     });
 
     logger.info('Withdrawal request created', {
@@ -155,12 +177,18 @@ export const createWithdraw = async (req: Request, res: Response): Promise<void>
       userId: req.user.id,
       projectId: value.projectId,
       amount: value.amount,
-      method: value.method
+      method: value.method,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id, body: req.body }, 'Error creating withdrawal request');
-    
-    if (error.message.includes('not eligible') || error.message.includes('Insufficient funds')) {
+    logger.error(
+      { err: error, userId: req.user?.id, body: req.body },
+      'Error creating withdrawal request'
+    );
+
+    if (
+      error.message.includes('not eligible') ||
+      error.message.includes('Insufficient funds')
+    ) {
       res.status(400).json({ message: error.message });
     } else {
       res.status(500).json({ message: 'Internal server error' });
@@ -206,7 +234,10 @@ export const createWithdraw = async (req: Request, res: Response): Promise<void>
  *       200:
  *         description: Withdrawal requests retrieved successfully
  */
-export const getMyWithdrawals = async (req: Request, res: Response): Promise<void> => {
+export const getMyWithdrawals = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Authentication required' });
@@ -235,12 +266,12 @@ export const getMyWithdrawals = async (req: Request, res: Response): Promise<voi
         {
           model: require('../models').Project,
           as: 'project',
-          attributes: ['id', 'title', 'status']
-        }
+          attributes: ['id', 'title', 'status'],
+        },
       ],
       order: [['requestedAt', 'DESC']],
       limit,
-      offset
+      offset,
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -252,11 +283,14 @@ export const getMyWithdrawals = async (req: Request, res: Response): Promise<voi
         totalPages,
         totalItems: count,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error fetching user withdrawals');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error fetching user withdrawals'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -285,7 +319,10 @@ export const getMyWithdrawals = async (req: Request, res: Response): Promise<voi
  *       404:
  *         description: Withdrawal not found
  */
-export const getWithdrawById = async (req: Request, res: Response): Promise<void> => {
+export const getWithdrawById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -299,20 +336,20 @@ export const getWithdrawById = async (req: Request, res: Response): Promise<void
         {
           model: require('../models').Project,
           as: 'project',
-          attributes: ['id', 'title', 'status']
+          attributes: ['id', 'title', 'status'],
         },
         {
           model: require('../models').User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName']
+          attributes: ['id', 'username', 'firstName', 'lastName'],
         },
         {
           model: require('../models').User,
           as: 'approver',
           attributes: ['id', 'username', 'firstName', 'lastName'],
-          required: false
-        }
-      ]
+          required: false,
+        },
+      ],
     });
 
     if (!withdrawal) {
@@ -325,15 +362,20 @@ export const getWithdrawById = async (req: Request, res: Response): Promise<void
     const isOwner = withdrawal.userId === req.user.id;
 
     if (!isAdmin && !isOwner) {
-      res.status(403).json({ message: 'Not authorized to view this withdrawal' });
+      res
+        .status(403)
+        .json({ message: 'Not authorized to view this withdrawal' });
       return;
     }
 
     res.json({
-      withdrawal: withdrawal.toJSON()
+      withdrawal: withdrawal.toJSON(),
     });
   } catch (error: any) {
-    logger.error({ err: error, withdrawalId: req.params.id, userId: req.user?.id }, 'Error fetching withdrawal');
+    logger.error(
+      { err: error, withdrawalId: req.params.id, userId: req.user?.id },
+      'Error fetching withdrawal'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -364,7 +406,10 @@ export const getWithdrawById = async (req: Request, res: Response): Promise<void
  *       404:
  *         description: Withdrawal not found
  */
-export const cancelWithdraw = async (req: Request, res: Response): Promise<void> => {
+export const cancelWithdraw = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -374,21 +419,28 @@ export const cancelWithdraw = async (req: Request, res: Response): Promise<void>
     }
 
     const isAdmin = req.user.role === UserRole.ADMIN;
-    const withdrawal = await withdrawService.cancelWithdrawal(id, req.user.id, isAdmin);
+    const withdrawal = await withdrawService.cancelWithdrawal(
+      id,
+      req.user.id,
+      isAdmin
+    );
 
     res.json({
       message: 'Withdrawal cancelled successfully',
-      withdrawal: withdrawal.toJSON()
+      withdrawal: withdrawal.toJSON(),
     });
 
     logger.info('Withdrawal cancelled', {
       withdrawalId: id,
       cancelledBy: req.user.id,
-      isAdmin
+      isAdmin,
     });
   } catch (error: any) {
-    logger.error({ err: error, withdrawalId: req.params.id, userId: req.user?.id }, 'Error cancelling withdrawal');
-    
+    logger.error(
+      { err: error, withdrawalId: req.params.id, userId: req.user?.id },
+      'Error cancelling withdrawal'
+    );
+
     if (error.message.includes('not found')) {
       res.status(404).json({ message: error.message });
     } else if (error.message.includes('not authorized')) {
@@ -423,7 +475,10 @@ export const cancelWithdraw = async (req: Request, res: Response): Promise<void>
  *       403:
  *         description: Not authorized
  */
-export const getProjectStats = async (req: Request, res: Response): Promise<void> => {
+export const getProjectStats = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { projectId } = req.params;
 
@@ -443,7 +498,9 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
     const isOwner = project.fundraiserId === req.user.id;
 
     if (!isAdmin && !isOwner) {
-      res.status(403).json({ message: 'Not authorized to view project withdrawal statistics' });
+      res.status(403).json({
+        message: 'Not authorized to view project withdrawal statistics',
+      });
       return;
     }
 
@@ -452,10 +509,13 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
     res.json({
       message: 'Project withdrawal statistics retrieved successfully',
       projectId,
-      stats
+      stats,
     });
   } catch (error: any) {
-    logger.error({ err: error, projectId: req.params.projectId, userId: req.user?.id }, 'Error fetching project withdrawal stats');
+    logger.error(
+      { err: error, projectId: req.params.projectId, userId: req.user?.id },
+      'Error fetching project withdrawal stats'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -497,7 +557,10 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
  *       403:
  *         description: Admin access required
  */
-export const getPendingWithdrawals = async (req: Request, res: Response): Promise<void> => {
+export const getPendingWithdrawals = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
@@ -506,7 +569,7 @@ export const getPendingWithdrawals = async (req: Request, res: Response): Promis
     const { method } = req.query;
 
     const whereClause: any = {
-      status: WithdrawStatus.PENDING
+      status: WithdrawStatus.PENDING,
     };
 
     if (method) {
@@ -519,17 +582,17 @@ export const getPendingWithdrawals = async (req: Request, res: Response): Promis
         {
           model: require('../models').Project,
           as: 'project',
-          attributes: ['id', 'title', 'status']
+          attributes: ['id', 'title', 'status'],
         },
         {
           model: require('../models').User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName', 'email']
-        }
+          attributes: ['id', 'username', 'firstName', 'lastName', 'email'],
+        },
       ],
       order: [['requestedAt', 'ASC']],
       limit,
-      offset
+      offset,
     });
 
     const totalPages = Math.ceil(count / limit);
@@ -541,11 +604,14 @@ export const getPendingWithdrawals = async (req: Request, res: Response): Promis
         totalPages,
         totalItems: count,
         hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error fetching pending withdrawals');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error fetching pending withdrawals'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -593,11 +659,14 @@ export const getPendingWithdrawals = async (req: Request, res: Response): Promis
  *       404:
  *         description: Withdrawal not found
  */
-export const approveWithdraw = async (req: Request, res: Response): Promise<void> => {
+export const approveWithdraw = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { error, value } = approvalSchema.validate(req.body);
-    
+
     if (error) {
       res.status(400).json({ message: error.details[0].message });
       return;
@@ -610,27 +679,36 @@ export const approveWithdraw = async (req: Request, res: Response): Promise<void
 
     const approval = {
       withdrawId: id,
-      ...value
+      ...value,
     };
 
-    const withdrawal = await withdrawService.processWithdrawApproval(req.user.id, approval);
+    const withdrawal = await withdrawService.processWithdrawApproval(
+      req.user.id,
+      approval
+    );
 
     res.json({
       message: `Withdrawal ${value.approved ? 'approved' : 'rejected'} successfully`,
-      withdrawal: withdrawal.toJSON()
+      withdrawal: withdrawal.toJSON(),
     });
 
     logger.info('Withdrawal approval processed', {
       withdrawalId: id,
       approved: value.approved,
-      adminId: req.user.id
+      adminId: req.user.id,
     });
   } catch (error: any) {
-    logger.error({ err: error, withdrawalId: req.params.id, userId: req.user?.id }, 'Error processing withdrawal approval');
-    
+    logger.error(
+      { err: error, withdrawalId: req.params.id, userId: req.user?.id },
+      'Error processing withdrawal approval'
+    );
+
     if (error.message.includes('not found')) {
       res.status(404).json({ message: error.message });
-    } else if (error.message.includes('Cannot approve') || error.message.includes('Cannot process')) {
+    } else if (
+      error.message.includes('Cannot approve') ||
+      error.message.includes('Cannot process')
+    ) {
       res.status(400).json({ message: error.message });
     } else {
       res.status(500).json({ message: 'Internal server error' });
@@ -664,7 +742,10 @@ export const approveWithdraw = async (req: Request, res: Response): Promise<void
  *       404:
  *         description: Withdrawal not found
  */
-export const processWithdraw = async (req: Request, res: Response): Promise<void> => {
+export const processWithdraw = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -673,24 +754,33 @@ export const processWithdraw = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const withdrawal = await withdrawService.processXenditDisbursement(id, req.user.id);
+    const withdrawal = await withdrawService.processXenditDisbursement(
+      id,
+      req.user.id
+    );
 
     res.json({
       message: 'Withdrawal processing started successfully',
-      withdrawal: withdrawal.toJSON()
+      withdrawal: withdrawal.toJSON(),
     });
 
     logger.info('Withdrawal processing started', {
       withdrawalId: id,
       processedBy: req.user.id,
-      disbursementId: withdrawal.xenditDisbursementId
+      disbursementId: withdrawal.xenditDisbursementId,
     });
   } catch (error: any) {
-    logger.error({ err: error, withdrawalId: req.params.id, userId: req.user?.id }, 'Error processing withdrawal');
-    
+    logger.error(
+      { err: error, withdrawalId: req.params.id, userId: req.user?.id },
+      'Error processing withdrawal'
+    );
+
     if (error.message.includes('not found')) {
       res.status(404).json({ message: error.message });
-    } else if (error.message.includes('Cannot process') || error.message.includes('required')) {
+    } else if (
+      error.message.includes('Cannot process') ||
+      error.message.includes('required')
+    ) {
       res.status(400).json({ message: error.message });
     } else {
       res.status(500).json({ message: 'Internal server error' });
@@ -717,18 +807,24 @@ export const processWithdraw = async (req: Request, res: Response): Promise<void
  *       400:
  *         description: Invalid webhook data
  */
-export const handleXenditWebhook = async (req: Request, res: Response): Promise<void> => {
+export const handleXenditWebhook = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     await withdrawService.processXenditWebhook(req.body);
-    
+
     res.status(200).json({ message: 'Webhook processed successfully' });
-    
+
     logger.info('Xendit disbursement webhook processed', {
       external_id: req.body.external_id,
-      status: req.body.status
+      status: req.body.status,
     });
   } catch (error: any) {
-    logger.error({ err: error, webhookData: req.body }, 'Error processing Xendit disbursement webhook');
+    logger.error(
+      { err: error, webhookData: req.body },
+      'Error processing Xendit disbursement webhook'
+    );
     res.status(500).json({ message: 'Internal error processing webhook' });
   }
 };

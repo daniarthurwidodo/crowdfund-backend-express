@@ -1,15 +1,18 @@
-import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/database';
-import { 
-  WithdrawAttributes, 
-  WithdrawCreationAttributes, 
+import { DataTypes, Model, Sequelize } from 'sequelize';
+import {
+  WithdrawAttributes,
+  WithdrawCreationAttributes,
   WithdrawInstance,
   WithdrawStatus,
-  WithdrawMethod
+  WithdrawMethod,
 } from '../types';
 import { generateULID } from '../utils/ulid';
 
-class Withdraw extends Model<WithdrawAttributes, WithdrawCreationAttributes> implements WithdrawInstance {
+export default function (sequelize: Sequelize) {
+class Withdraw
+  extends Model<WithdrawAttributes, WithdrawCreationAttributes>
+  implements WithdrawInstance
+{
   public id!: string;
   public userId!: string;
   public projectId!: string;
@@ -25,26 +28,26 @@ class Withdraw extends Model<WithdrawAttributes, WithdrawCreationAttributes> imp
   public rejectedAt?: Date;
   public reason?: string;
   public adminNotes?: string;
-  
+
   // Bank details
   public bankName?: string;
   public bankCode?: string;
   public accountNumber?: string;
   public accountHolderName?: string;
-  
+
   // Xendit disbursement details
   public xenditDisbursementId?: string;
   public disbursementData?: any;
-  
+
   // Fees and processing
   public processingFee!: number;
   public netAmount!: number;
-  
+
   // Audit fields
   public approvedBy?: string;
   public processedBy?: string;
   public rejectedBy?: string;
-  
+
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -81,7 +84,7 @@ class Withdraw extends Model<WithdrawAttributes, WithdrawCreationAttributes> imp
 
     const percentageFee = Math.floor(Number(this.amount) * feeRate);
     const totalFee = percentageFee + fixedFee;
-    
+
     // Cap the fee at 2% of the withdrawal amount
     const maxFee = Math.floor(Number(this.amount) * 0.02);
     return Math.min(totalFee, maxFee);
@@ -97,11 +100,17 @@ class Withdraw extends Model<WithdrawAttributes, WithdrawCreationAttributes> imp
   }
 
   public canBeRejected(): boolean {
-    return [WithdrawStatus.PENDING, WithdrawStatus.PROCESSING].includes(this.status);
+    return [WithdrawStatus.PENDING, WithdrawStatus.PROCESSING].includes(
+      this.status
+    );
   }
 
   public canBeCancelled(): boolean {
-    return [WithdrawStatus.PENDING, WithdrawStatus.PROCESSING, WithdrawStatus.APPROVED].includes(this.status);
+    return [
+      WithdrawStatus.PENDING,
+      WithdrawStatus.PROCESSING,
+      WithdrawStatus.APPROVED,
+    ].includes(this.status);
   }
 
   public canBeProcessed(): boolean {
@@ -109,21 +118,39 @@ class Withdraw extends Model<WithdrawAttributes, WithdrawCreationAttributes> imp
   }
 
   public isCompleted(): boolean {
-    return [WithdrawStatus.COMPLETED, WithdrawStatus.REJECTED, WithdrawStatus.CANCELLED].includes(this.status);
+    return [
+      WithdrawStatus.COMPLETED,
+      WithdrawStatus.REJECTED,
+      WithdrawStatus.CANCELLED,
+    ].includes(this.status);
   }
 
   public getDurationInHours(): number {
     const now = new Date();
     const requestTime = this.requestedAt;
-    return Math.floor((now.getTime() - requestTime.getTime()) / (1000 * 60 * 60));
+    return Math.floor(
+      (now.getTime() - requestTime.getTime()) / (1000 * 60 * 60)
+    );
   }
 
   static associate(models: any) {
     Withdraw.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
-    Withdraw.belongsTo(models.Project, { foreignKey: 'projectId', as: 'project' });
-    Withdraw.belongsTo(models.User, { foreignKey: 'approvedBy', as: 'approver' });
-    Withdraw.belongsTo(models.User, { foreignKey: 'processedBy', as: 'processor' });
-    Withdraw.belongsTo(models.User, { foreignKey: 'rejectedBy', as: 'rejecter' });
+    Withdraw.belongsTo(models.Project, {
+      foreignKey: 'projectId',
+      as: 'project',
+    });
+    Withdraw.belongsTo(models.User, {
+      foreignKey: 'approvedBy',
+      as: 'approver',
+    });
+    Withdraw.belongsTo(models.User, {
+      foreignKey: 'processedBy',
+      as: 'processor',
+    });
+    Withdraw.belongsTo(models.User, {
+      foreignKey: 'rejectedBy',
+      as: 'rejecter',
+    });
   }
 }
 
@@ -132,17 +159,17 @@ Withdraw.init(
     id: {
       type: DataTypes.STRING(26),
       primaryKey: true,
-      defaultValue: () => generateULID()
+      defaultValue: () => generateULID(),
     },
     userId: {
       type: DataTypes.STRING(26),
       allowNull: false,
-      field: 'user_id'
+      field: 'user_id',
     },
     projectId: {
       type: DataTypes.STRING(26),
       allowNull: false,
-      field: 'project_id'
+      field: 'project_id',
     },
     amount: {
       type: DataTypes.DECIMAL(15, 0),
@@ -150,7 +177,7 @@ Withdraw.init(
       get() {
         const value = this.getDataValue('amount');
         return value ? Number(value) : 0;
-      }
+      },
     },
     availableAmount: {
       type: DataTypes.DECIMAL(15, 0),
@@ -159,86 +186,86 @@ Withdraw.init(
       get() {
         const value = this.getDataValue('availableAmount');
         return value ? Number(value) : 0;
-      }
+      },
     },
     currency: {
       type: DataTypes.STRING(3),
       allowNull: false,
-      defaultValue: 'IDR'
+      defaultValue: 'IDR',
     },
     method: {
       type: DataTypes.ENUM(...Object.values(WithdrawMethod)),
-      allowNull: false
+      allowNull: false,
     },
     status: {
       type: DataTypes.ENUM(...Object.values(WithdrawStatus)),
       allowNull: false,
-      defaultValue: WithdrawStatus.PENDING
+      defaultValue: WithdrawStatus.PENDING,
     },
     requestedAt: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
-      field: 'requested_at'
+      field: 'requested_at',
     },
     approvedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      field: 'approved_at'
+      field: 'approved_at',
     },
     processedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      field: 'processed_at'
+      field: 'processed_at',
     },
     completedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      field: 'completed_at'
+      field: 'completed_at',
     },
     rejectedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      field: 'rejected_at'
+      field: 'rejected_at',
     },
     reason: {
       type: DataTypes.TEXT,
-      allowNull: true
+      allowNull: true,
     },
     adminNotes: {
       type: DataTypes.TEXT,
       allowNull: true,
-      field: 'admin_notes'
+      field: 'admin_notes',
     },
     bankName: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'bank_name'
+      field: 'bank_name',
     },
     bankCode: {
       type: DataTypes.STRING(10),
       allowNull: true,
-      field: 'bank_code'
+      field: 'bank_code',
     },
     accountNumber: {
       type: DataTypes.STRING(50),
       allowNull: true,
-      field: 'account_number'
+      field: 'account_number',
     },
     accountHolderName: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'account_holder_name'
+      field: 'account_holder_name',
     },
     xenditDisbursementId: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'xendit_disbursement_id'
+      field: 'xendit_disbursement_id',
     },
     disbursementData: {
       type: DataTypes.JSONB,
       allowNull: true,
-      field: 'disbursement_data'
+      field: 'disbursement_data',
     },
     processingFee: {
       type: DataTypes.DECIMAL(15, 0),
@@ -248,7 +275,7 @@ Withdraw.init(
       get() {
         const value = this.getDataValue('processingFee');
         return value ? Number(value) : 0;
-      }
+      },
     },
     netAmount: {
       type: DataTypes.DECIMAL(15, 0),
@@ -258,23 +285,33 @@ Withdraw.init(
       get() {
         const value = this.getDataValue('netAmount');
         return value ? Number(value) : 0;
-      }
+      },
     },
     approvedBy: {
       type: DataTypes.STRING(26),
       allowNull: true,
-      field: 'approved_by'
+      field: 'approved_by',
     },
     processedBy: {
       type: DataTypes.STRING(26),
       allowNull: true,
-      field: 'processed_by'
+      field: 'processed_by',
     },
     rejectedBy: {
       type: DataTypes.STRING(26),
       allowNull: true,
-      field: 'rejected_by'
-    }
+      field: 'rejected_by',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
   },
   {
     sequelize,
@@ -287,17 +324,17 @@ Withdraw.init(
         // Calculate processing fee and net amount before creation
         const processingFee = await withdraw.calculateProcessingFee();
         const netAmount = await withdraw.calculateNetAmount();
-        
+
         withdraw.processingFee = processingFee;
         withdraw.netAmount = netAmount;
       },
       beforeUpdate: async (withdraw: Withdraw) => {
         // Update timestamps based on status changes
         const now = new Date();
-        
+
         if (withdraw.changed('status')) {
           const newStatus = withdraw.status;
-          
+
           switch (newStatus) {
             case WithdrawStatus.APPROVED:
               if (!withdraw.approvedAt) {
@@ -321,9 +358,10 @@ Withdraw.init(
               break;
           }
         }
-      }
-    }
+      },
+    },
   }
 );
 
-export default Withdraw;
+  return Withdraw;
+}

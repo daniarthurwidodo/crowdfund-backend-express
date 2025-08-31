@@ -38,22 +38,103 @@ interface DonationData {
 
 // Sample data arrays
 const firstNames = [
-  'John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'Chris', 'Jessica',
-  'Robert', 'Ashley', 'Matthew', 'Amanda', 'James', 'Jennifer', 'William',
-  'Lisa', 'Richard', 'Michelle', 'Thomas', 'Kimberly', 'Charles', 'Amy',
-  'Daniel', 'Angela', 'Mark', 'Helen', 'Paul', 'Deborah', 'Steven', 'Rachel',
-  'Kevin', 'Carolyn', 'Jason', 'Janet', 'Jeffrey', 'Maria', 'Ryan', 'Heather',
-  'Jacob', 'Diane', 'Gary', 'Julie', 'Nicholas', 'Joyce', 'Eric', 'Victoria'
+  'John',
+  'Jane',
+  'Michael',
+  'Sarah',
+  'David',
+  'Emily',
+  'Chris',
+  'Jessica',
+  'Robert',
+  'Ashley',
+  'Matthew',
+  'Amanda',
+  'James',
+  'Jennifer',
+  'William',
+  'Lisa',
+  'Richard',
+  'Michelle',
+  'Thomas',
+  'Kimberly',
+  'Charles',
+  'Amy',
+  'Daniel',
+  'Angela',
+  'Mark',
+  'Helen',
+  'Paul',
+  'Deborah',
+  'Steven',
+  'Rachel',
+  'Kevin',
+  'Carolyn',
+  'Jason',
+  'Janet',
+  'Jeffrey',
+  'Maria',
+  'Ryan',
+  'Heather',
+  'Jacob',
+  'Diane',
+  'Gary',
+  'Julie',
+  'Nicholas',
+  'Joyce',
+  'Eric',
+  'Victoria',
 ];
 
 const lastNames = [
-  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller',
-  'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzales',
-  'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
-  'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark',
-  'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Allen', 'King',
-  'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores', 'Green',
-  'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell'
+  'Smith',
+  'Johnson',
+  'Williams',
+  'Brown',
+  'Jones',
+  'Garcia',
+  'Miller',
+  'Davis',
+  'Rodriguez',
+  'Martinez',
+  'Hernandez',
+  'Lopez',
+  'Gonzales',
+  'Wilson',
+  'Anderson',
+  'Thomas',
+  'Taylor',
+  'Moore',
+  'Jackson',
+  'Martin',
+  'Lee',
+  'Perez',
+  'Thompson',
+  'White',
+  'Harris',
+  'Sanchez',
+  'Clark',
+  'Ramirez',
+  'Lewis',
+  'Robinson',
+  'Walker',
+  'Young',
+  'Allen',
+  'King',
+  'Wright',
+  'Scott',
+  'Torres',
+  'Nguyen',
+  'Hill',
+  'Flores',
+  'Green',
+  'Adams',
+  'Nelson',
+  'Baker',
+  'Hall',
+  'Rivera',
+  'Campbell',
+  'Mitchell',
 ];
 
 const projectTitles = [
@@ -68,7 +149,7 @@ const projectTitles = [
   'Mental Health Support Groups',
   'Environmental Cleanup Initiative',
   'Homeless Shelter Renovation',
-  'Children\'s Playground Construction',
+  "Children's Playground Construction",
   'Community Tool Lending Library',
   'Free Music Lessons Program',
   'Disaster Relief Emergency Kit',
@@ -81,7 +162,7 @@ const projectTitles = [
   'Neighborhood Watch Program',
   'Free Computer Lab Setup',
   'Community Composting Center',
-  'Local Bike Share Program'
+  'Local Bike Share Program',
 ];
 
 const projectDescriptions = [
@@ -109,7 +190,7 @@ const projectDescriptions = [
   'Enhancing community safety through organized neighborhood watch initiatives.',
   'Providing digital access and education through community computer laboratories.',
   'Reducing waste and promoting sustainability through community composting programs.',
-  'Promoting healthy transportation and reducing carbon emissions through bike sharing.'
+  'Promoting healthy transportation and reducing carbon emissions through bike sharing.',
 ];
 
 const donationMessages = [
@@ -124,7 +205,7 @@ const donationMessages = [
   'Excited to see the results!',
   'Wonderful initiative, keep going!',
   'Supporting local causes is important.',
-  'Love what you\'re doing here.',
+  "Love what you're doing here.",
   'This will benefit so many people.',
   'Fantastic idea, well executed.',
   'Happy to contribute to this cause.',
@@ -132,7 +213,7 @@ const donationMessages = [
   'Making a positive impact together.',
   'This is how change happens.',
   'Inspiring work, thank you!',
-  'Building a better future together.'
+  'Building a better future together.',
 ];
 
 const anonymousNames = [
@@ -145,7 +226,7 @@ const anonymousNames = [
   'Mystery Benefactor',
   'Kind Stranger',
   'Silent Supporter',
-  'Anonymous Well-wisher'
+  'Anonymous Well-wisher',
 ];
 
 // Utility functions
@@ -163,7 +244,9 @@ const getRandomAmount = (min: number, max: number): number => {
 };
 
 const getRandomDate = (start: Date, end: Date): Date => {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  return new Date(
+    start.getTime() + Math.random() * (end.getTime() - start.getTime())
+  );
 };
 
 const generateUsers = (count: number, role: UserRole): UserData[] => {
@@ -174,23 +257,23 @@ const generateUsers = (count: number, role: UserRole): UserData[] => {
   for (let i = 0; i < count; i++) {
     let email: string;
     let username: string;
-    
+
     // Ensure unique email and username
     do {
       const firstName = getRandomItem(firstNames);
       const lastName = getRandomItem(lastNames);
       const number = getRandomNumber(1, 999);
-      
+
       email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${number}@example.com`;
       username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${number}`;
     } while (usedEmails.has(email) || usedUsernames.has(username));
-    
+
     usedEmails.add(email);
     usedUsernames.add(username);
-    
+
     const firstName = getRandomItem(firstNames);
     const lastName = getRandomItem(lastNames);
-    
+
     users.push({
       email,
       username,
@@ -198,10 +281,10 @@ const generateUsers = (count: number, role: UserRole): UserData[] => {
       firstName,
       lastName,
       role,
-      isActive: true
+      isActive: true,
     });
   }
-  
+
   return users;
 };
 
@@ -209,37 +292,38 @@ const generateProjects = (fundraisers: any[], count: number): ProjectData[] => {
   const projects: ProjectData[] = [];
   const now = new Date();
   const statuses = Object.values(ProjectStatus);
-  
+
   for (let i = 0; i < count; i++) {
     const fundraiser = getRandomItem(fundraisers);
     const title = getRandomItem(projectTitles);
     const description = getRandomItem(projectDescriptions);
     const targetAmount = getRandomAmount(5000000, 500000000); // 5M to 500M IDR
-    
+
     // Generate realistic date ranges
     const startDate = getRandomDate(
       new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000), // 6 months ago
-      new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)    // 1 month from now
+      new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 1 month from now
     );
-    
+
     const endDate = getRandomDate(
       new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000), // At least 30 days
       new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000) // Up to 1 year
     );
-    
+
     let status = getRandomItem(statuses);
-    
+
     // Make status more realistic based on dates
     if (endDate < now && status === ProjectStatus.ACTIVE) {
-      status = Math.random() > 0.5 ? ProjectStatus.CLOSED : ProjectStatus.ACTIVE;
+      status =
+        Math.random() > 0.5 ? ProjectStatus.CLOSED : ProjectStatus.ACTIVE;
     }
-    
+
     const images = [
       `https://picsum.photos/800/600?random=${i * 3 + 1}`,
       `https://picsum.photos/800/600?random=${i * 3 + 2}`,
-      `https://picsum.photos/800/600?random=${i * 3 + 3}`
+      `https://picsum.photos/800/600?random=${i * 3 + 3}`,
     ].slice(0, getRandomNumber(1, 3));
-    
+
     projects.push({
       title: `${title} ${i + 1}`,
       description: `${description} This project aims to create lasting positive change in our community through collaborative effort and innovative solutions.`,
@@ -248,32 +332,35 @@ const generateProjects = (fundraisers: any[], count: number): ProjectData[] => {
       startDate,
       endDate,
       status,
-      fundraiserId: fundraiser.id
+      fundraiserId: fundraiser.id,
     });
   }
-  
+
   return projects;
 };
 
 const generateDonations = (users: any[], projects: any[]): DonationData[] => {
   const donations: DonationData[] = [];
-  
+
   projects.forEach((project, projectIndex) => {
     // Generate 3-15 donations per project
     const donationCount = getRandomNumber(3, 15);
     let totalDonated = 0;
-    
+
     for (let i = 0; i < donationCount; i++) {
       const isAnonymous = Math.random() > 0.7; // 30% anonymous
-      const amount = getRandomAmount(50000, Math.min(10000000, project.targetAmount * 0.3)); // 50K to 10M IDR max
-      
-      let donationData: DonationData = {
+      const amount = getRandomAmount(
+        50000,
+        Math.min(10000000, project.targetAmount * 0.3)
+      ); // 50K to 10M IDR max
+
+      const donationData: DonationData = {
         amount,
         paymentStatus: PaymentStatus.PAID, // For seed data, make all donations paid
         isAnonymous,
-        projectId: project.id
+        projectId: project.id,
       };
-      
+
       if (isAnonymous) {
         donationData.donorName = getRandomItem(anonymousNames);
       } else {
@@ -281,86 +368,98 @@ const generateDonations = (users: any[], projects: any[]): DonationData[] => {
         donationData.userId = donor.id;
         donationData.donorName = `${donor.firstName} ${donor.lastName}`;
       }
-      
+
       // Add message to 60% of donations
       if (Math.random() > 0.4) {
         donationData.message = getRandomItem(donationMessages);
       }
-      
+
       donations.push(donationData);
       totalDonated += amount;
-      
+
       // If project is CLOSED and we've reached target, stop adding donations
-      if (project.status === ProjectStatus.CLOSED && totalDonated >= project.targetAmount) {
+      if (
+        project.status === ProjectStatus.CLOSED &&
+        totalDonated >= project.targetAmount
+      ) {
         break;
       }
     }
-    
+
     // Update project current amount
     project.currentAmount = totalDonated;
-    
+
     // Adjust status based on funding
-    if (totalDonated >= project.targetAmount && project.status === ProjectStatus.ACTIVE) {
+    if (
+      totalDonated >= project.targetAmount &&
+      project.status === ProjectStatus.ACTIVE
+    ) {
       project.status = ProjectStatus.CLOSED;
     }
   });
-  
+
   return donations;
 };
 
 const clearDatabase = async (): Promise<void> => {
   logger.info('Clearing existing data...');
-  
+
   await Donation.destroy({ where: {} });
   await Project.destroy({ where: {} });
   await User.destroy({ where: {} });
-  
+
   logger.info('Database cleared successfully');
 };
 
 const seedDatabase = async (): Promise<void> => {
   try {
     logger.info('Starting database seeding...');
-    
+
     // Connect to database
     await sequelize.authenticate();
     logger.info('Database connection established');
-    
+
     // Clear existing data
     await clearDatabase();
-    
+
     // Generate and create users
     logger.info('Creating users...');
     const regularUsersData = generateUsers(20, UserRole.USER);
     const fundraisersData = generateUsers(20, UserRole.FUNDRAISER);
-    
+
     const regularUsers = await User.bulkCreate(regularUsersData);
     const fundraisers = await User.bulkCreate(fundraisersData);
-    
-    logger.info(`Created ${regularUsers.length} regular users and ${fundraisers.length} fundraisers`);
-    
+
+    logger.info(
+      `Created ${regularUsers.length} regular users and ${fundraisers.length} fundraisers`
+    );
+
     // Generate and create projects
     logger.info('Creating projects...');
     const projectsData = generateProjects(fundraisers, 20);
     const projects = await Project.bulkCreate(projectsData);
-    
+
     logger.info(`Created ${projects.length} projects`);
-    
+
     // Generate and create donations
     logger.info('Creating donations...');
     const allUsers = [...regularUsers, ...fundraisers];
     const donationsData = generateDonations(allUsers, projects);
-    const donations = await Donation.bulkCreate(donationsData, { hooks: false });
-    
+    const donations = await Donation.bulkCreate(donationsData, {
+      hooks: false,
+    });
+
     logger.info(`Created ${donations.length} donations`);
-    
+
     // Since we disabled hooks during bulk creation, we need to manually update project amounts
     // But instead of calculating manually, let's re-enable hooks temporarily and re-create one donation per project
     logger.info('Updating project funding amounts by re-triggering hooks...');
-    
+
     for (const project of projects) {
-      const projectDonations = donations.filter(d => d.projectId === project.id);
-      
+      const projectDonations = donations.filter(
+        d => d.projectId === project.id
+      );
+
       if (projectDonations.length > 0) {
         // Calculate total manually but more carefully
         let totalAmount = 0;
@@ -370,17 +469,18 @@ const seedDatabase = async (): Promise<void> => {
             totalAmount += amount;
           }
         }
-        
+
         // Update project status based on total
         let status = project.status;
         const now = new Date();
-        
+
         if (totalAmount >= Number(project.targetAmount)) {
           status = ProjectStatus.CLOSED;
         } else if (project.endDate < now && status === ProjectStatus.ACTIVE) {
-          status = Math.random() > 0.3 ? ProjectStatus.CLOSED : ProjectStatus.ACTIVE;
+          status =
+            Math.random() > 0.3 ? ProjectStatus.CLOSED : ProjectStatus.ACTIVE;
         }
-        
+
         // Update using raw SQL to avoid potential Sequelize issues
         await sequelize.query(
           'UPDATE projects SET "currentAmount" = :amount, status = :status, "updatedAt" = :updatedAt WHERE id = :id',
@@ -389,48 +489,58 @@ const seedDatabase = async (): Promise<void> => {
               amount: Math.round(totalAmount),
               status,
               updatedAt: new Date(),
-              id: project.id
-            }
+              id: project.id,
+            },
           }
         );
-        
-        logger.info(`Updated project ${project.id} with amount ${Math.round(totalAmount)} and status ${status}`);
+
+        logger.info(
+          `Updated project ${project.id} with amount ${Math.round(totalAmount)} and status ${status}`
+        );
       }
     }
-    
+
     // Generate statistics
     const stats = {
       users: {
         total: regularUsers.length + fundraisers.length,
         regular: regularUsers.length,
-        fundraisers: fundraisers.length
+        fundraisers: fundraisers.length,
       },
       projects: {
         total: projects.length,
         active: projects.filter(p => p.status === ProjectStatus.ACTIVE).length,
         closed: projects.filter(p => p.status === ProjectStatus.CLOSED).length,
-        cancelled: projects.filter(p => p.status === ProjectStatus.CANCELLED).length
+        cancelled: projects.filter(p => p.status === ProjectStatus.CANCELLED)
+          .length,
       },
       donations: {
         total: donations.length,
         anonymous: donations.filter(d => d.isAnonymous).length,
         authenticated: donations.filter(d => !d.isAnonymous).length,
-        totalAmount: donations.reduce((sum, d) => sum + d.amount, 0)
-      }
+        totalAmount: donations.reduce((sum, d) => sum + d.amount, 0),
+      },
     };
-    
+
     logger.info('Database seeding completed successfully!', stats);
-    
+
     console.log('\n🎉 Database Seeding Complete!');
     console.log('================================');
-    console.log(`👥 Users: ${stats.users.total} (${stats.users.regular} users, ${stats.users.fundraisers} fundraisers)`);
-    console.log(`📊 Projects: ${stats.projects.total} (${stats.projects.active} active, ${stats.projects.closed} closed, ${stats.projects.cancelled} cancelled)`);
-    console.log(`💰 Donations: ${stats.donations.total} (${stats.donations.anonymous} anonymous, ${stats.donations.authenticated} authenticated)`);
-    console.log(`💵 Total Amount: IDR ${stats.donations.totalAmount.toLocaleString()}`);
+    console.log(
+      `👥 Users: ${stats.users.total} (${stats.users.regular} users, ${stats.users.fundraisers} fundraisers)`
+    );
+    console.log(
+      `📊 Projects: ${stats.projects.total} (${stats.projects.active} active, ${stats.projects.closed} closed, ${stats.projects.cancelled} cancelled)`
+    );
+    console.log(
+      `💰 Donations: ${stats.donations.total} (${stats.donations.anonymous} anonymous, ${stats.donations.authenticated} authenticated)`
+    );
+    console.log(
+      `💵 Total Amount: IDR ${stats.donations.totalAmount.toLocaleString()}`
+    );
     console.log('\n✨ You can now test the API with realistic data!');
-    
+
     await sequelize.close();
-    
   } catch (error) {
     logger.error({ err: error }, 'Error seeding database');
     console.error('\n❌ Seeding failed:', error);

@@ -9,7 +9,7 @@ import {
   getJobStatus,
   runJob,
   startJobScheduler,
-  stopJobScheduler
+  stopJobScheduler,
 } from '../controllers/adminController';
 
 const router = Router();

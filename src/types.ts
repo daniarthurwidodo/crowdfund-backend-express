@@ -17,7 +17,7 @@ declare module 'express-session' {
 export enum UserRole {
   ADMIN = 'ADMIN',
   USER = 'USER',
-  FUNDRAISER = 'FUNDRAISER'
+  FUNDRAISER = 'FUNDRAISER',
 }
 
 export interface UserAttributes {
@@ -35,13 +35,16 @@ export interface UserAttributes {
   updatedAt: Date;
 }
 
-export interface UserCreationAttributes extends Omit<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {
+export interface UserCreationAttributes
+  extends Omit<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {
   id?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface UserInstance extends Model<UserAttributes, UserCreationAttributes>, UserAttributes {
+export interface UserInstance
+  extends Model<UserAttributes, UserCreationAttributes>,
+    UserAttributes {
   validatePassword(password: string): Promise<boolean>;
   toJSON(): Omit<UserAttributes, 'password'>;
 }
@@ -49,7 +52,7 @@ export interface UserInstance extends Model<UserAttributes, UserCreationAttribut
 export enum ProjectStatus {
   ACTIVE = 'ACTIVE',
   CLOSED = 'CLOSED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 export interface ProjectAttributes {
@@ -67,14 +70,20 @@ export interface ProjectAttributes {
   updatedAt: Date;
 }
 
-export interface ProjectCreationAttributes extends Omit<ProjectAttributes, 'id' | 'currentAmount' | 'createdAt' | 'updatedAt'> {
+export interface ProjectCreationAttributes
+  extends Omit<
+    ProjectAttributes,
+    'id' | 'currentAmount' | 'createdAt' | 'updatedAt'
+  > {
   id?: string;
   currentAmount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface ProjectInstance extends Model<ProjectAttributes, ProjectCreationAttributes>, ProjectAttributes {
+export interface ProjectInstance
+  extends Model<ProjectAttributes, ProjectCreationAttributes>,
+    ProjectAttributes {
   toJSON(): ProjectAttributes;
 }
 
@@ -92,13 +101,16 @@ export interface DonationAttributes {
   updatedAt: Date;
 }
 
-export interface DonationCreationAttributes extends Omit<DonationAttributes, 'id' | 'createdAt' | 'updatedAt'> {
+export interface DonationCreationAttributes
+  extends Omit<DonationAttributes, 'id' | 'createdAt' | 'updatedAt'> {
   id?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface DonationInstance extends Model<DonationAttributes, DonationCreationAttributes>, DonationAttributes {
+export interface DonationInstance
+  extends Model<DonationAttributes, DonationCreationAttributes>,
+    DonationAttributes {
   toJSON(): DonationAttributes;
 }
 
@@ -108,14 +120,14 @@ export enum PaymentStatus {
   PAID = 'PAID',
   EXPIRED = 'EXPIRED',
   FAILED = 'FAILED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 export enum PaymentMethod {
   INVOICE = 'INVOICE',
   VIRTUAL_ACCOUNT = 'VIRTUAL_ACCOUNT',
   EWALLET = 'EWALLET',
-  CARD = 'CARD'
+  CARD = 'CARD',
 }
 
 export interface PaymentAttributes {
@@ -141,13 +153,16 @@ export interface PaymentAttributes {
   updatedAt: Date;
 }
 
-export interface PaymentCreationAttributes extends Omit<PaymentAttributes, 'id' | 'createdAt' | 'updatedAt'> {
+export interface PaymentCreationAttributes
+  extends Omit<PaymentAttributes, 'id' | 'createdAt' | 'updatedAt'> {
   id?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface PaymentInstance extends Model<PaymentAttributes, PaymentCreationAttributes>, PaymentAttributes {
+export interface PaymentInstance
+  extends Model<PaymentAttributes, PaymentCreationAttributes>,
+    PaymentAttributes {
   toJSON(): PaymentAttributes;
 }
 
@@ -215,13 +230,13 @@ export enum WithdrawStatus {
   REJECTED = 'REJECTED',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 export enum WithdrawMethod {
   BANK_TRANSFER = 'BANK_TRANSFER',
   XENDIT_DISBURSEMENT = 'XENDIT_DISBURSEMENT',
-  MANUAL = 'MANUAL'
+  MANUAL = 'MANUAL',
 }
 
 export interface WithdrawAttributes {
@@ -240,31 +255,35 @@ export interface WithdrawAttributes {
   rejectedAt?: Date;
   reason?: string;
   adminNotes?: string;
-  
+
   // Bank details
   bankName?: string;
   bankCode?: string;
   accountNumber?: string;
   accountHolderName?: string;
-  
+
   // Xendit disbursement details
   xenditDisbursementId?: string;
   disbursementData?: any;
-  
+
   // Fees and processing
   processingFee: number;
   netAmount: number;
-  
+
   // Audit fields
   approvedBy?: string;
   processedBy?: string;
   rejectedBy?: string;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface WithdrawCreationAttributes extends Omit<WithdrawAttributes, 'id' | 'createdAt' | 'updatedAt' | 'requestedAt' | 'netAmount'> {
+export interface WithdrawCreationAttributes
+  extends Omit<
+    WithdrawAttributes,
+    'id' | 'createdAt' | 'updatedAt' | 'requestedAt' | 'netAmount'
+  > {
   id?: string;
 }
 

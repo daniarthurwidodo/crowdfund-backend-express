@@ -30,54 +30,60 @@ const PORT = process.env.PORT || 3000;
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
 });
 
 app.use(httpLogger);
 app.use(helmet());
 app.use(limiter);
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded images statically
 app.use('/uploads', express.static('uploads'));
 
-redisClient.connect().catch((error) => logger.error('Redis connection error:', error));
+redisClient
+  .connect()
+  .catch(error => logger.error('Redis connection error:', error));
 
-app.use(session({
-  store: new RedisStore({ client: redisClient }),
-  secret: process.env.SESSION_SECRET || 'fallback-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24
-  }
-}));
+app.use(
+  session({
+    store: new RedisStore({ client: redisClient }),
+    secret: process.env.SESSION_SECRET || 'fallback-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24,
+    },
+  })
+);
 
 app.get('/health', async (req: Request, res: Response) => {
   try {
     await sequelize.authenticate();
     await redisClient.ping();
-    
+
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
       services: {
         database: 'Connected',
-        redis: 'Connected'
-      }
+        redis: 'Connected',
+      },
     });
   } catch (error: any) {
     res.status(503).json({
       status: 'Error',
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -96,10 +102,10 @@ app.get('/health/live', (req: Request, res: Response) => {
 });
 
 app.post('/shutdown', (req: Request, res: Response) => {
-  res.status(200).json({ 
-    message: 'Shutdown initiated. Server will gracefully shutdown.' 
+  res.status(200).json({
+    message: 'Shutdown initiated. Server will gracefully shutdown.',
   });
-  
+
   setTimeout(() => {
     gracefulShutdown('MANUAL_SHUTDOWN');
   }, 1000);
@@ -114,11 +120,15 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/withdrawals', withdrawRoutes);
 app.use('/api/admin', adminRoutes);
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Crowdfund API Documentation'
-}));
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpecs, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Crowdfund API Documentation',
+  })
+);
 
 app.use('*', (req: Request, res: Response) => {
   res.status(404).json({ message: 'Route not found' });
@@ -126,9 +136,9 @@ app.use('*', (req: Request, res: Response) => {
 
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   logger.error({ err: error, req }, 'Unhandled error');
-  res.status(500).json({ 
+  res.status(500).json({
     message: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    ...(process.env.NODE_ENV === 'development' && { error: error.message }),
   });
 });
 
@@ -137,7 +147,7 @@ let scheduler: ProjectScheduler;
 
 const gracefulShutdown = async (signal: string): Promise<void> => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
-  
+
   const shutdownTimeout = setTimeout(() => {
     logger.error('Graceful shutdown timeout. Forcing exit.');
     process.exit(1);
@@ -206,40 +216,43 @@ const startServer = async (): Promise<void> => {
   try {
     await sequelize.authenticate();
     logger.info('Database connection established successfully.');
-    
+
     if (process.env.NODE_ENV !== 'production') {
       await sequelize.sync();
       logger.info('Database synchronized.');
     }
-    
+
     // Initialize upload directories
     initializeUploadDirectories();
-    
+
     // Initialize project scheduler
     scheduler = ProjectScheduler.getInstance();
     scheduler.start();
-    
+
     // Initialize payment reconciliation job scheduler
     jobScheduler.initialize();
     jobScheduler.start();
     logger.info('Payment reconciliation scheduler initialized and started');
-    
+
     server = app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
       logger.info(`Health check available at: http://localhost:${PORT}/health`);
-      logger.info(`API Documentation available at: http://localhost:${PORT}/api-docs`);
+      logger.info(
+        `API Documentation available at: http://localhost:${PORT}/api-docs`
+      );
       logger.info('Press Ctrl+C for graceful shutdown');
     });
 
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
-        logger.error(`Port ${PORT} is already in use. Please choose a different port.`);
+        logger.error(
+          `Port ${PORT} is already in use. Please choose a different port.`
+        );
       } else {
         logger.error({ err: error }, 'Server error');
       }
       process.exit(1);
     });
-
   } catch (error) {
     logger.fatal({ err: error }, 'Unable to start server');
     process.exit(1);

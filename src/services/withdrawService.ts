@@ -1,15 +1,15 @@
 import { Op, Transaction } from 'sequelize';
 import { Project, Donation, Payment, Withdraw } from '../models';
-import { 
-  WithdrawStatus, 
-  WithdrawMethod, 
-  WithdrawInstance, 
+import {
+  WithdrawStatus,
+  WithdrawMethod,
+  WithdrawInstance,
   WithdrawRequest,
   WithdrawApproval,
   PaymentStatus,
   ProjectStatus,
   XenditDisbursementRequest,
-  XenditDisbursementResponse
+  XenditDisbursementResponse,
 } from '../types';
 import { xendit, XENDIT_CONFIG } from '../config/xendit';
 import { generateULID } from '../utils/ulid';
@@ -29,7 +29,10 @@ export class WithdrawService {
   /**
    * Check withdrawal eligibility for a project
    */
-  async checkWithdrawEligibility(projectId: string, userId: string): Promise<WithdrawEligibility> {
+  async checkWithdrawEligibility(
+    projectId: string,
+    userId: string
+  ): Promise<WithdrawEligibility> {
     try {
       const project = await Project.findByPk(projectId, {
         include: [
@@ -38,15 +41,21 @@ export class WithdrawService {
             as: 'donations',
             where: { paymentStatus: PaymentStatus.PAID },
             required: false,
-            attributes: []
-          }
+            attributes: [],
+          },
         ],
         attributes: {
           include: [
-            [Project.sequelize!.fn('SUM', Project.sequelize!.col('donations.amount')), 'totalRaised']
-          ]
+            [
+              Project.sequelize!.fn(
+                'SUM',
+                Project.sequelize!.col('donations.amount')
+              ),
+              'totalRaised',
+            ],
+          ],
         },
-        group: ['Project.id']
+        group: ['Project.id'],
       });
 
       if (!project) {
@@ -55,7 +64,7 @@ export class WithdrawService {
           reason: 'Project not found',
           availableAmount: 0,
           totalRaised: 0,
-          pendingWithdrawals: 0
+          pendingWithdrawals: 0,
         };
       }
 
@@ -66,42 +75,52 @@ export class WithdrawService {
           reason: 'Only project owner can request withdrawals',
           availableAmount: 0,
           totalRaised: 0,
-          pendingWithdrawals: 0
+          pendingWithdrawals: 0,
         };
       }
 
       // Check project status
-      if (project.status !== ProjectStatus.ACTIVE && project.status !== ProjectStatus.COMPLETED) {
+      if (
+        project.status !== ProjectStatus.ACTIVE &&
+        project.status !== ProjectStatus.COMPLETED
+      ) {
         return {
           eligible: false,
           reason: 'Project must be active or completed to request withdrawals',
           availableAmount: 0,
           totalRaised: 0,
-          pendingWithdrawals: 0
+          pendingWithdrawals: 0,
         };
       }
 
       const totalRaised = Number(project.dataValues.totalRaised) || 0;
 
       // Get pending withdrawals
-      const pendingWithdrawals = await Withdraw.sum('amount', {
-        where: {
-          projectId,
-          status: {
-            [Op.in]: [WithdrawStatus.PENDING, WithdrawStatus.PROCESSING, WithdrawStatus.APPROVED]
-          }
-        }
-      }) || 0;
+      const pendingWithdrawals =
+        (await Withdraw.sum('amount', {
+          where: {
+            projectId,
+            status: {
+              [Op.in]: [
+                WithdrawStatus.PENDING,
+                WithdrawStatus.PROCESSING,
+                WithdrawStatus.APPROVED,
+              ],
+            },
+          },
+        })) || 0;
 
       // Get completed withdrawals
-      const completedWithdrawals = await Withdraw.sum('amount', {
-        where: {
-          projectId,
-          status: WithdrawStatus.COMPLETED
-        }
-      }) || 0;
+      const completedWithdrawals =
+        (await Withdraw.sum('amount', {
+          where: {
+            projectId,
+            status: WithdrawStatus.COMPLETED,
+          },
+        })) || 0;
 
-      const availableAmount = totalRaised - completedWithdrawals - Number(pendingWithdrawals);
+      const availableAmount =
+        totalRaised - completedWithdrawals - Number(pendingWithdrawals);
 
       // Minimum withdrawal amount check
       const minimumWithdrawal = 10000; // IDR 10,000
@@ -111,7 +130,7 @@ export class WithdrawService {
           reason: `Minimum withdrawal amount is IDR ${minimumWithdrawal.toLocaleString()}`,
           availableAmount,
           totalRaised,
-          pendingWithdrawals: Number(pendingWithdrawals)
+          pendingWithdrawals: Number(pendingWithdrawals),
         };
       }
 
@@ -119,10 +138,13 @@ export class WithdrawService {
         eligible: true,
         availableAmount,
         totalRaised,
-        pendingWithdrawals: Number(pendingWithdrawals)
+        pendingWithdrawals: Number(pendingWithdrawals),
       };
     } catch (error) {
-      logger.error({ err: error, projectId, userId }, 'Error checking withdrawal eligibility');
+      logger.error(
+        { err: error, projectId, userId },
+        'Error checking withdrawal eligibility'
+      );
       throw error;
     }
   }
@@ -130,15 +152,21 @@ export class WithdrawService {
   /**
    * Create a withdrawal request
    */
-  async createWithdrawRequest(userId: string, request: WithdrawRequest): Promise<WithdrawInstance> {
+  async createWithdrawRequest(
+    userId: string,
+    request: WithdrawRequest
+  ): Promise<WithdrawInstance> {
     let transaction: Transaction | undefined;
-    
+
     try {
       transaction = await Withdraw.sequelize!.transaction();
-      
+
       // Check eligibility
-      const eligibility = await this.checkWithdrawEligibility(request.projectId, userId);
-      
+      const eligibility = await this.checkWithdrawEligibility(
+        request.projectId,
+        userId
+      );
+
       if (!eligibility.eligible) {
         throw new Error(eligibility.reason || 'Withdrawal not eligible');
       }
@@ -149,16 +177,29 @@ export class WithdrawService {
       }
 
       if (request.amount > eligibility.availableAmount) {
-        throw new Error(`Insufficient funds. Available: IDR ${eligibility.availableAmount.toLocaleString()}`);
+        throw new Error(
+          `Insufficient funds. Available: IDR ${eligibility.availableAmount.toLocaleString()}`
+        );
       }
 
       // Validate bank account for bank transfers
-      if ([WithdrawMethod.BANK_TRANSFER, WithdrawMethod.XENDIT_DISBURSEMENT].includes(request.method)) {
+      if (
+        [
+          WithdrawMethod.BANK_TRANSFER,
+          WithdrawMethod.XENDIT_DISBURSEMENT,
+        ].includes(request.method)
+      ) {
         if (!request.bankAccount) {
-          throw new Error('Bank account details are required for this withdrawal method');
+          throw new Error(
+            'Bank account details are required for this withdrawal method'
+          );
         }
 
-        if (!request.bankAccount.bankCode || !request.bankAccount.accountNumber || !request.bankAccount.accountHolderName) {
+        if (
+          !request.bankAccount.bankCode ||
+          !request.bankAccount.accountNumber ||
+          !request.bankAccount.accountHolderName
+        ) {
           throw new Error('Complete bank account details are required');
         }
       }
@@ -173,7 +214,7 @@ export class WithdrawService {
         method: request.method,
         status: WithdrawStatus.PENDING,
         requestedAt: new Date(),
-        reason: request.reason
+        reason: request.reason,
       };
 
       // Add bank details if provided
@@ -181,7 +222,8 @@ export class WithdrawService {
         withdrawalData.bankName = request.bankAccount.bankName;
         withdrawalData.bankCode = request.bankAccount.bankCode;
         withdrawalData.accountNumber = request.bankAccount.accountNumber;
-        withdrawalData.accountHolderName = request.bankAccount.accountHolderName;
+        withdrawalData.accountHolderName =
+          request.bankAccount.accountHolderName;
       }
 
       const withdrawal = await Withdraw.create(withdrawalData, { transaction });
@@ -193,7 +235,7 @@ export class WithdrawService {
         userId,
         projectId: request.projectId,
         amount: request.amount,
-        method: request.method
+        method: request.method,
       });
 
       return withdrawal;
@@ -201,7 +243,10 @@ export class WithdrawService {
       if (transaction) {
         await transaction.rollback();
       }
-      logger.error({ err: error, userId, request }, 'Error creating withdrawal request');
+      logger.error(
+        { err: error, userId, request },
+        'Error creating withdrawal request'
+      );
       throw error;
     }
   }
@@ -209,42 +254,54 @@ export class WithdrawService {
   /**
    * Approve or reject a withdrawal request (admin only)
    */
-  async processWithdrawApproval(adminId: string, approval: WithdrawApproval): Promise<WithdrawInstance> {
+  async processWithdrawApproval(
+    adminId: string,
+    approval: WithdrawApproval
+  ): Promise<WithdrawInstance> {
     let transaction: Transaction | undefined;
-    
+
     try {
       transaction = await Withdraw.sequelize!.transaction();
-      
-      const withdrawal = await Withdraw.findByPk(approval.withdrawId, { transaction });
-      
+
+      const withdrawal = await Withdraw.findByPk(approval.withdrawId, {
+        transaction,
+      });
+
       if (!withdrawal) {
         throw new Error('Withdrawal request not found');
       }
 
       if (!withdrawal.canBeApproved() && !withdrawal.canBeRejected()) {
-        throw new Error(`Cannot process withdrawal in ${withdrawal.status} status`);
+        throw new Error(
+          `Cannot process withdrawal in ${withdrawal.status} status`
+        );
       }
 
       const updateData: any = {
-        adminNotes: approval.adminNotes
+        adminNotes: approval.adminNotes,
       };
 
       if (approval.approved) {
         // Re-check eligibility before approval
-        const eligibility = await this.checkWithdrawEligibility(withdrawal.projectId, withdrawal.userId);
-        
+        const eligibility = await this.checkWithdrawEligibility(
+          withdrawal.projectId,
+          withdrawal.userId
+        );
+
         if (!eligibility.eligible) {
           throw new Error(`Cannot approve: ${eligibility.reason}`);
         }
 
         if (withdrawal.amount > eligibility.availableAmount) {
-          throw new Error(`Cannot approve: Insufficient funds. Available: IDR ${eligibility.availableAmount.toLocaleString()}`);
+          throw new Error(
+            `Cannot approve: Insufficient funds. Available: IDR ${eligibility.availableAmount.toLocaleString()}`
+          );
         }
 
         updateData.status = WithdrawStatus.APPROVED;
         updateData.approvedBy = adminId;
         updateData.approvedAt = new Date();
-        
+
         // Update processing method if provided
         if (approval.processingMethod) {
           updateData.method = approval.processingMethod;
@@ -262,7 +319,7 @@ export class WithdrawService {
         withdrawalId: withdrawal.id,
         approved: approval.approved,
         adminId,
-        newStatus: updateData.status
+        newStatus: updateData.status,
       });
 
       return withdrawal;
@@ -270,7 +327,10 @@ export class WithdrawService {
       if (transaction) {
         await transaction.rollback();
       }
-      logger.error({ err: error, adminId, approval }, 'Error processing withdrawal approval');
+      logger.error(
+        { err: error, adminId, approval },
+        'Error processing withdrawal approval'
+      );
       throw error;
     }
   }
@@ -278,32 +338,46 @@ export class WithdrawService {
   /**
    * Process approved withdrawal via Xendit disbursement
    */
-  async processXenditDisbursement(withdrawalId: string, processedBy: string): Promise<WithdrawInstance> {
+  async processXenditDisbursement(
+    withdrawalId: string,
+    processedBy: string
+  ): Promise<WithdrawInstance> {
     let transaction: Transaction | undefined;
-    
+
     try {
       transaction = await Withdraw.sequelize!.transaction();
-      
+
       const withdrawal = await Withdraw.findByPk(withdrawalId, { transaction });
-      
+
       if (!withdrawal) {
         throw new Error('Withdrawal not found');
       }
 
       if (!withdrawal.canBeProcessed()) {
-        throw new Error(`Cannot process withdrawal in ${withdrawal.status} status`);
+        throw new Error(
+          `Cannot process withdrawal in ${withdrawal.status} status`
+        );
       }
 
-      if (!withdrawal.bankCode || !withdrawal.accountNumber || !withdrawal.accountHolderName) {
-        throw new Error('Bank account details are required for Xendit disbursement');
+      if (
+        !withdrawal.bankCode ||
+        !withdrawal.accountNumber ||
+        !withdrawal.accountHolderName
+      ) {
+        throw new Error(
+          'Bank account details are required for Xendit disbursement'
+        );
       }
 
       // Update status to processing
-      await withdrawal.update({
-        status: WithdrawStatus.PROCESSING,
-        processedBy,
-        processedAt: new Date()
-      }, { transaction });
+      await withdrawal.update(
+        {
+          status: WithdrawStatus.PROCESSING,
+          processedBy,
+          processedAt: new Date(),
+        },
+        { transaction }
+      );
 
       await transaction.commit();
 
@@ -320,10 +394,11 @@ export class WithdrawService {
         };
 
         let disbursementResponse: XenditDisbursementResponse;
-        
+
         if (XENDIT_CONFIG.isProduction) {
           // Real Xendit API call
-          disbursementResponse = await xendit.Disbursement.create(disbursementRequest);
+          disbursementResponse =
+            await xendit.Disbursement.create(disbursementRequest);
         } else {
           // Mock response for development
           disbursementResponse = {
@@ -335,21 +410,21 @@ export class WithdrawService {
             disbursement_description: disbursementRequest.description,
             status: 'PENDING',
             created: new Date().toISOString(),
-            updated: new Date().toISOString()
+            updated: new Date().toISOString(),
           };
         }
 
         // Update withdrawal with disbursement details
         await withdrawal.update({
           xenditDisbursementId: disbursementResponse.id,
-          disbursementData: disbursementResponse
+          disbursementData: disbursementResponse,
         });
 
         logger.info('Xendit disbursement created', {
           withdrawalId: withdrawal.id,
           disbursementId: disbursementResponse.id,
           amount: withdrawal.netAmount,
-          processedBy
+          processedBy,
         });
 
         return withdrawal;
@@ -357,17 +432,23 @@ export class WithdrawService {
         // Update withdrawal status to failed
         await withdrawal.update({
           status: WithdrawStatus.FAILED,
-          adminNotes: `Disbursement failed: ${disbursementError.message}`
+          adminNotes: `Disbursement failed: ${disbursementError.message}`,
         });
 
-        logger.error({ err: disbursementError, withdrawalId }, 'Xendit disbursement failed');
+        logger.error(
+          { err: disbursementError, withdrawalId },
+          'Xendit disbursement failed'
+        );
         throw new Error(`Disbursement failed: ${disbursementError.message}`);
       }
     } catch (error) {
       if (transaction) {
         await transaction.rollback();
       }
-      logger.error({ err: error, withdrawalId, processedBy }, 'Error processing Xendit disbursement');
+      logger.error(
+        { err: error, withdrawalId, processedBy },
+        'Error processing Xendit disbursement'
+      );
       throw error;
     }
   }
@@ -375,27 +456,32 @@ export class WithdrawService {
   /**
    * Mark withdrawal as completed (when disbursement succeeds)
    */
-  async completeWithdrawal(withdrawalId: string, disbursementData?: any): Promise<WithdrawInstance> {
+  async completeWithdrawal(
+    withdrawalId: string,
+    disbursementData?: any
+  ): Promise<WithdrawInstance> {
     try {
       const withdrawal = await Withdraw.findByPk(withdrawalId);
-      
+
       if (!withdrawal) {
         throw new Error('Withdrawal not found');
       }
 
       if (withdrawal.status !== WithdrawStatus.PROCESSING) {
-        throw new Error(`Cannot complete withdrawal in ${withdrawal.status} status`);
+        throw new Error(
+          `Cannot complete withdrawal in ${withdrawal.status} status`
+        );
       }
 
       const updateData: any = {
         status: WithdrawStatus.COMPLETED,
-        completedAt: new Date()
+        completedAt: new Date(),
       };
 
       if (disbursementData) {
         updateData.disbursementData = {
           ...withdrawal.disbursementData,
-          ...disbursementData
+          ...disbursementData,
         };
       }
 
@@ -404,7 +490,7 @@ export class WithdrawService {
       logger.info('Withdrawal completed', {
         withdrawalId: withdrawal.id,
         amount: withdrawal.amount,
-        netAmount: withdrawal.netAmount
+        netAmount: withdrawal.netAmount,
       });
 
       return withdrawal;
@@ -417,10 +503,14 @@ export class WithdrawService {
   /**
    * Cancel a withdrawal request
    */
-  async cancelWithdrawal(withdrawalId: string, userId: string, isAdmin: boolean = false): Promise<WithdrawInstance> {
+  async cancelWithdrawal(
+    withdrawalId: string,
+    userId: string,
+    isAdmin: boolean = false
+  ): Promise<WithdrawInstance> {
     try {
       const withdrawal = await Withdraw.findByPk(withdrawalId);
-      
+
       if (!withdrawal) {
         throw new Error('Withdrawal not found');
       }
@@ -431,23 +521,28 @@ export class WithdrawService {
       }
 
       if (!withdrawal.canBeCancelled()) {
-        throw new Error(`Cannot cancel withdrawal in ${withdrawal.status} status`);
+        throw new Error(
+          `Cannot cancel withdrawal in ${withdrawal.status} status`
+        );
       }
 
       await withdrawal.update({
         status: WithdrawStatus.CANCELLED,
-        adminNotes: isAdmin ? 'Cancelled by admin' : 'Cancelled by user'
+        adminNotes: isAdmin ? 'Cancelled by admin' : 'Cancelled by user',
       });
 
       logger.info('Withdrawal cancelled', {
         withdrawalId: withdrawal.id,
         cancelledBy: userId,
-        isAdmin
+        isAdmin,
       });
 
       return withdrawal;
     } catch (error) {
-      logger.error({ err: error, withdrawalId, userId }, 'Error cancelling withdrawal');
+      logger.error(
+        { err: error, withdrawalId, userId },
+        'Error cancelling withdrawal'
+      );
       throw error;
     }
   }
@@ -465,47 +560,57 @@ export class WithdrawService {
     try {
       const [requested, completed, pending, fees] = await Promise.all([
         Withdraw.sum('amount', {
-          where: { projectId }
+          where: { projectId },
         }) || 0,
-        
+
         Withdraw.sum('amount', {
-          where: { 
+          where: {
             projectId,
-            status: WithdrawStatus.COMPLETED
-          }
+            status: WithdrawStatus.COMPLETED,
+          },
         }) || 0,
-        
+
         Withdraw.sum('amount', {
-          where: { 
+          where: {
             projectId,
             status: {
-              [Op.in]: [WithdrawStatus.PENDING, WithdrawStatus.PROCESSING, WithdrawStatus.APPROVED]
-            }
-          }
+              [Op.in]: [
+                WithdrawStatus.PENDING,
+                WithdrawStatus.PROCESSING,
+                WithdrawStatus.APPROVED,
+              ],
+            },
+          },
         }) || 0,
-        
+
         Withdraw.sum('processingFee', {
-          where: { 
+          where: {
             projectId,
-            status: WithdrawStatus.COMPLETED
-          }
-        }) || 0
+            status: WithdrawStatus.COMPLETED,
+          },
+        }) || 0,
       ]);
 
       // Get project's total raised amount
       const project = await Project.findByPk(projectId);
       const totalRaised = project ? Number(project.currentAmount) : 0;
-      const availableAmount = Math.max(0, totalRaised - Number(completed) - Number(pending));
+      const availableAmount = Math.max(
+        0,
+        totalRaised - Number(completed) - Number(pending)
+      );
 
       return {
         totalRequested: Number(requested),
         totalCompleted: Number(completed),
         totalPending: Number(pending),
         availableAmount,
-        totalFees: Number(fees)
+        totalFees: Number(fees),
       };
     } catch (error) {
-      logger.error({ err: error, projectId }, 'Error getting project withdraw stats');
+      logger.error(
+        { err: error, projectId },
+        'Error getting project withdraw stats'
+      );
       throw error;
     }
   }
@@ -516,7 +621,7 @@ export class WithdrawService {
   async processXenditWebhook(webhookData: any): Promise<void> {
     try {
       const { external_id, status, id: disbursementId } = webhookData;
-      
+
       if (!external_id || !external_id.startsWith('withdraw-')) {
         logger.warn('Invalid webhook external_id', { external_id });
         return;
@@ -524,17 +629,20 @@ export class WithdrawService {
 
       const withdrawalId = external_id.replace('withdraw-', '');
       const withdrawal = await Withdraw.findByPk(withdrawalId);
-      
+
       if (!withdrawal) {
-        logger.warn('Withdrawal not found for webhook', { withdrawalId, external_id });
+        logger.warn('Withdrawal not found for webhook', {
+          withdrawalId,
+          external_id,
+        });
         return;
       }
 
       if (withdrawal.xenditDisbursementId !== disbursementId) {
-        logger.warn('Disbursement ID mismatch', { 
-          withdrawalId, 
+        logger.warn('Disbursement ID mismatch', {
+          withdrawalId,
           expected: withdrawal.xenditDisbursementId,
-          received: disbursementId 
+          received: disbursementId,
         });
         return;
       }
@@ -544,8 +652,8 @@ export class WithdrawService {
       const updateData: any = {
         disbursementData: {
           ...withdrawal.disbursementData,
-          ...webhookData
-        }
+          ...webhookData,
+        },
       };
 
       switch (status.toUpperCase()) {
@@ -570,10 +678,13 @@ export class WithdrawService {
         withdrawalId,
         oldStatus: withdrawal.status,
         newStatus,
-        disbursementStatus: status
+        disbursementStatus: status,
       });
     } catch (error) {
-      logger.error({ err: error, webhookData }, 'Error processing Xendit disbursement webhook');
+      logger.error(
+        { err: error, webhookData },
+        'Error processing Xendit disbursement webhook'
+      );
       throw error;
     }
   }

@@ -8,22 +8,26 @@ const logger = createChildLogger('AdminController');
 
 const runReconciliationSchema = Joi.object({
   type: Joi.string().valid('full', 'incremental').required(),
-  hoursBack: Joi.number().integer().min(1).max(168).optional() // Max 1 week
+  hoursBack: Joi.number().integer().min(1).max(168).optional(), // Max 1 week
 });
 
 const runJobSchema = Joi.object({
-  jobName: Joi.string().valid(
-    'incremental-reconciliation',
-    'full-reconciliation', 
-    'expired-payments',
-    'weekly-report'
-  ).required()
+  jobName: Joi.string()
+    .valid(
+      'incremental-reconciliation',
+      'full-reconciliation',
+      'expired-payments',
+      'weekly-report'
+    )
+    .required(),
 });
 
 const reconcilePaymentsSchema = Joi.object({
-  paymentIds: Joi.array().items(
-    Joi.string().length(26).required()
-  ).min(1).max(100).required()
+  paymentIds: Joi.array()
+    .items(Joi.string().length(26).required())
+    .min(1)
+    .max(100)
+    .required(),
 });
 
 /**
@@ -61,7 +65,10 @@ const reconcilePaymentsSchema = Joi.object({
  *       403:
  *         description: Admin access required
  */
-export const runReconciliation = async (req: Request, res: Response): Promise<void> => {
+export const runReconciliation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = runReconciliationSchema.validate(req.body);
     if (error) {
@@ -69,26 +76,31 @@ export const runReconciliation = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    logger.info('Admin triggered reconciliation', { 
+    logger.info('Admin triggered reconciliation', {
       type: value.type,
       hoursBack: value.hoursBack,
-      adminId: req.user?.id
+      adminId: req.user?.id,
     });
 
     let result;
     if (value.type === 'full') {
       result = await paymentReconciliationJob.runFullReconciliation();
     } else {
-      result = await paymentReconciliationJob.runIncrementalReconciliation(value.hoursBack || 4);
+      result = await paymentReconciliationJob.runIncrementalReconciliation(
+        value.hoursBack || 4
+      );
     }
 
     res.json({
       message: 'Reconciliation completed successfully',
-      result
+      result,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error running reconciliation');
-    
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error running reconciliation'
+    );
+
     if (error.message === 'Reconciliation job is already running') {
       res.status(409).json({ message: error.message });
     } else {
@@ -126,7 +138,10 @@ export const runReconciliation = async (req: Request, res: Response): Promise<vo
  *       200:
  *         description: Payments reconciled successfully
  */
-export const reconcilePayments = async (req: Request, res: Response): Promise<void> => {
+export const reconcilePayments = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { error, value } = reconcilePaymentsSchema.validate(req.body);
     if (error) {
@@ -134,19 +149,24 @@ export const reconcilePayments = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    logger.info('Admin triggered payment reconciliation', { 
+    logger.info('Admin triggered payment reconciliation', {
       paymentCount: value.paymentIds.length,
-      adminId: req.user?.id
+      adminId: req.user?.id,
     });
 
-    const result = await paymentReconciliationJob.reconcilePayments(value.paymentIds);
+    const result = await paymentReconciliationJob.reconcilePayments(
+      value.paymentIds
+    );
 
     res.json({
       message: 'Payments reconciled successfully',
-      result
+      result,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error reconciling payments');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error reconciling payments'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -164,18 +184,26 @@ export const reconcilePayments = async (req: Request, res: Response): Promise<vo
  *       200:
  *         description: Expired payments handled successfully
  */
-export const handleExpiredPayments = async (req: Request, res: Response): Promise<void> => {
+export const handleExpiredPayments = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    logger.info('Admin triggered expired payment handling', { adminId: req.user?.id });
+    logger.info('Admin triggered expired payment handling', {
+      adminId: req.user?.id,
+    });
 
     const result = await paymentReconciliationJob.handleExpiredPayments();
 
     res.json({
       message: 'Expired payments handled successfully',
-      result
+      result,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error handling expired payments');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error handling expired payments'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -202,16 +230,20 @@ export const handleExpiredPayments = async (req: Request, res: Response): Promis
  *       200:
  *         description: Reconciliation report generated successfully
  */
-export const getReconciliationReport = async (req: Request, res: Response): Promise<void> => {
+export const getReconciliationReport = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const days = Math.min(parseInt(req.query.days as string) || 7, 30);
 
-    logger.info('Admin requested reconciliation report', { 
+    logger.info('Admin requested reconciliation report', {
       days,
-      adminId: req.user?.id
+      adminId: req.user?.id,
     });
 
-    const report = await paymentReconciliationJob.generateReconciliationReport(days);
+    const report =
+      await paymentReconciliationJob.generateReconciliationReport(days);
 
     res.json({
       message: 'Reconciliation report generated successfully',
@@ -219,11 +251,14 @@ export const getReconciliationReport = async (req: Request, res: Response): Prom
       period: {
         days,
         fromDate: new Date(Date.now() - days * 24 * 60 * 60 * 1000),
-        toDate: new Date()
-      }
+        toDate: new Date(),
+      },
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error generating reconciliation report');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error generating reconciliation report'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -241,16 +276,22 @@ export const getReconciliationReport = async (req: Request, res: Response): Prom
  *       200:
  *         description: Job status retrieved successfully
  */
-export const getJobStatus = async (req: Request, res: Response): Promise<void> => {
+export const getJobStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const status = jobScheduler.getStatus();
 
     res.json({
       message: 'Job status retrieved successfully',
-      status
+      status,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error getting job status');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error getting job status'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -289,19 +330,22 @@ export const runJob = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    logger.info('Admin manually triggered job', { 
+    logger.info('Admin manually triggered job', {
       jobName: value.jobName,
-      adminId: req.user?.id
+      adminId: req.user?.id,
     });
 
     await jobScheduler.runJobNow(value.jobName);
 
     res.json({
-      message: `Job '${value.jobName}' executed successfully`
+      message: `Job '${value.jobName}' executed successfully`,
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id, jobName: req.body.jobName }, 'Error running job');
-    
+    logger.error(
+      { err: error, userId: req.user?.id, jobName: req.body.jobName },
+      'Error running job'
+    );
+
     if (error.message.includes('already running')) {
       res.status(409).json({ message: error.message });
     } else {
@@ -323,17 +367,23 @@ export const runJob = async (req: Request, res: Response): Promise<void> => {
  *       200:
  *         description: Job scheduler started successfully
  */
-export const startJobScheduler = async (req: Request, res: Response): Promise<void> => {
+export const startJobScheduler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     logger.info('Admin starting job scheduler', { adminId: req.user?.id });
 
     jobScheduler.start();
 
     res.json({
-      message: 'Job scheduler started successfully'
+      message: 'Job scheduler started successfully',
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error starting job scheduler');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error starting job scheduler'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -351,17 +401,23 @@ export const startJobScheduler = async (req: Request, res: Response): Promise<vo
  *       200:
  *         description: Job scheduler stopped successfully
  */
-export const stopJobScheduler = async (req: Request, res: Response): Promise<void> => {
+export const stopJobScheduler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     logger.info('Admin stopping job scheduler', { adminId: req.user?.id });
 
     jobScheduler.stop();
 
     res.json({
-      message: 'Job scheduler stopped successfully'
+      message: 'Job scheduler stopped successfully',
     });
   } catch (error: any) {
-    logger.error({ err: error, userId: req.user?.id }, 'Error stopping job scheduler');
+    logger.error(
+      { err: error, userId: req.user?.id },
+      'Error stopping job scheduler'
+    );
     res.status(500).json({ message: 'Internal server error' });
   }
 };

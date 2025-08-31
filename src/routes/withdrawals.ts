@@ -11,7 +11,7 @@ import {
   getPendingWithdrawals,
   approveWithdraw,
   processWithdraw,
-  handleXenditWebhook
+  handleXenditWebhook,
 } from '../controllers/withdrawController';
 
 const router = Router();
